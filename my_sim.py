@@ -1,10 +1,34 @@
 import numpy as np
 import heapq
+import itertools
+
+
+class Customer:
+    # class for keeping track of customers
+    # generate a new id for each customer
+    cust_id = itertools.count()
+
+    def __init__(self, time: float):
+        self.custom_id = next(Customer.cust_id)
+        self.arrival_time = time
+
+    def __str__(self):
+        return (
+            f"The customer has id: {self.custom_id} and arrived at: {self.arrival_time}"
+        )
+
+    # id is added to repr just for debugging purposes
+    def __repr__(self):
+        return f"Customer(arrival={self.arrival_time}, id={self.custom_id})"
 
 
 # Überhaupt möglich mit heap event klasse zu speichern? muss sonst einfach die Zeit vor event objekt stehen?
 class Event:
-    def __init__(self, time: float, kind: str, c_id: int) -> None:
+    # class for keeping track of events
+    # generate an id for every event for sorting purposes in heapq
+    ev_id = itertools.count()
+
+    def __init__(self, time: float, kind: str, c_id: int, customer: object) -> None:
         """
 
         :param time: time at which the event occurs
@@ -19,7 +43,7 @@ class Event:
         return self.kind
 
     def __repr__(self):
-        return f'Event({self.time}, "{self.kind}", {self.c_num})'
+        return f'Event(time={self.time}, kind="{self.kind}", id={self.c_num})'
 
     # unnötige Funktion?
     def get_event_data(self) -> (float, str, int):
@@ -34,7 +58,7 @@ class Event:
 # Generate Arrival events
 # wirklich notwendig rng zu übergeben oder reicht dann numpy dependency?
 def get_arrival(event_list: list, rng: np.random._generator.Generator, t: float):
-
+    t_arrival = t + rng.exponential()
     raise NotImplementedError
 
 
@@ -56,7 +80,7 @@ class Checkout:
         return self.c_type
 
     def __repr__(self):
-        return f'Checkout({self.c_id},"{self.c_type}")'
+        return f'Checkout(id={self.c_id}, type="{self.c_type}")'
 
 
 # use heapq.heapify(list) to make list into heap and use heappush to insert elements
@@ -70,6 +94,8 @@ class Checkout:
 
 
 def simulation(num_cc: int, num_sc: int, t_max, run_num) -> None:
+    # initialize rng generator
+    rng = np.random.default_rng(seed=42)
     # Initialize Event list
     eventlist = []
     heapq.heapify(eventlist)
@@ -77,20 +103,26 @@ def simulation(num_cc: int, num_sc: int, t_max, run_num) -> None:
     t = 0.0
     # initialize queue length dictionary
     checkouts = {}
-    # initialize cashier checkouts
+
+    # initialize cashier and self checkouts and store the checkout objects in a dictionary
     for i in range(num_cc):
         key = f"Checkout{i+1}"
         id = i + 1
         checkouts[key] = Checkout((i + 1), "cc")
-    # initialize self checkouts
     for j in range(num_cc, num_cc + num_sc):
         key = f"Checkout{j+1}"
         id = j + 1
         checkouts[key] = Checkout((j + 1), "sc")
-    print(checkouts)
 
+    print(checkouts)
+    # method to advance time
     while t < t_max:
+        t = t + 1
         pass
+
+    # print loop for testing purposes
+    for i in range(num_cc + num_sc):
+        print(checkouts[f"Checkout{i+1}"].ql)
 
 
 simulation(6, 2, 5, 4)

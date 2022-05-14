@@ -1,56 +1,48 @@
 import numpy as np
 import heapq
-import itertools
+from itertools import count
+
+# use dataclasses to improve readability
+from dataclasses import dataclass, field
 
 
+# initialized with slots to increase performance and frozen to prevent changing of values
+@dataclass(slots=True, frozen=True)
 class Customer:
-    # class for keeping track of customers
-    # generate a new id for each customer
-    cust_id = itertools.count()
+    """class to keep track of customers"""
 
-    def __init__(self, time: float):
-        self.custom_id = next(Customer.cust_id)
-        self.arrival_time = time
-
-    def __str__(self):
-        return (
-            f"The customer has id: {self.custom_id} and arrived at: {self.arrival_time}"
-        )
-
-    # id is added to repr just for debugging purposes
-    def __repr__(self):
-        return f"Customer(arrival={self.arrival_time}, id={self.custom_id})"
+    # initialize Variables for Object
+    t_arr: float
+    """arrival time of the customer"""
+    cust_id: int = field(default_factory=count().__next__, init=False)
+    """generate an unique id for every customer"""
 
 
 # Überhaupt möglich mit heap event klasse zu speichern? muss sonst einfach die Zeit vor event objekt stehen?
+@dataclass(slots=True, frozen=True)
 class Event:
-    # class for keeping track of events
-    # generate an id for every event for sorting purposes in heapq
-    ev_id = itertools.count()
+    """class for keeping track of events"""
 
-    def __init__(self, time: float, kind: str, c_id: int, customer: object) -> None:
-        """
+    # initialize variables for object
+    time: float
+    """time at which event occurs"""
+    kind: str
+    """kind of event "arr": arrival and "dep": departure"""
+    customer: object
+    """customer that is handled"""
+    c_id: int
+    """id of checkout where event occurs"""
+    # init is set to false, so the counter doesn't reset every time
+    ev_id: int = field(default_factory=count().__next__, init=False)
+    """generate a new id when a class object is created, used for sorting purposes in heapq"""
 
-        :param time: time at which the event occurs
-        :param kind: defines the kind of event "arr" is arrival and "dep" is departure
-        :param c_id: id of the Checkout at which the event occurs
-        """
-        self.time = time
-        self.kind = kind
-        self.c_num = c_id
-
-    def __str__(self):
-        return self.kind
-
-    def __repr__(self):
-        return f'Event(time={self.time}, kind="{self.kind}", id={self.c_num})'
-
-    # unnötige Funktion?
+    # define methods
+    # unnötige methode?
     def get_event_data(self) -> (float, str, int):
         """
         :return: return event data for the event list
         """
-        return self.time, self.kind, self.c_num
+        return self.time, self.kind, self.c_id
 
 
 # welchen Datentyp hat eigentlich Zeit? Int? -> erstmal float nutzen
@@ -62,25 +54,21 @@ def get_arrival(event_list: list, rng: np.random._generator.Generator, t: float)
     raise NotImplementedError
 
 
-# Sollte Checkout noch eine Liste übergeben bekommen in der Länger der queue geloggt
-# wird zum Auswählen der Kasse bei Ankunft?
+@dataclass(slots=True, frozen=True)
 class Checkout:
-    def __init__(self, c_id: int, c_type: str) -> None:
-        """
-        :param c_id: id of the checkout
-        :param c_type: type of the checkout
-        """
-        self.c_id = c_id
-        self.c_type = c_type
-        # initialize cashier_status and queue length to zero
-        self.c_status = 0
-        self.ql = 0
+    """Class to keep track of Checkouts"""
 
-    def __str__(self):
-        return self.c_type
-
-    def __repr__(self):
-        return f'Checkout(id={self.c_id}, type="{self.c_type}")'
+    # initialize variables
+    c_id: int
+    """ id of the checkout """
+    c_type: str
+    """ type of the checkout"""
+    c_status = 0
+    """ status of the cashier"""
+    ql: int = 0
+    """queue length of the checkout"""
+    c_quant: int = 1
+    """ number of cashiers """
 
 
 # use heapq.heapify(list) to make list into heap and use heappush to insert elements
@@ -93,7 +81,13 @@ class Checkout:
 # werden!
 
 
-def simulation(num_cc: int, num_sc: int, t_max, run_num) -> None:
+def simulation(
+    num_cc: int,
+    num_sc: int,
+    t_max: float,
+    run_num: int,
+) -> None:
+
     # initialize rng generator
     rng = np.random.default_rng(seed=42)
     # Initialize Event list
@@ -104,7 +98,7 @@ def simulation(num_cc: int, num_sc: int, t_max, run_num) -> None:
     # initialize queue length dictionary
     checkouts = {}
 
-    # initialize cashier and self checkouts and store the checkout objects in a dictionary
+    # initialize cashier and self-checkouts and store the checkout objects in a dictionary
     for i in range(num_cc):
         key = f"Checkout{i+1}"
         id = i + 1

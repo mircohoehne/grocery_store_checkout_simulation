@@ -1,12 +1,15 @@
-import numpy as np
 import heapq
-from itertools import count
 
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
+from itertools import count
+from typing import Tuple, Union
+
+import numpy as np
 
 
 # initialized with slots to increase performance and frozen to prevent changing of values
+# muss frozen auf false gesetzt werden um departure Zeit zu erfassen?
 @dataclass(slots=True, frozen=True)
 class Customer:
     """class to keep track of customers"""
@@ -38,7 +41,7 @@ class Event:
 
     # define methods
     # unnötige methode?
-    def get_event_data(self) -> (float, str, int):
+    def get_event_data(self) -> Tuple[float, str, int]:
         """
         :return: return event data for the event list
         """
@@ -49,7 +52,9 @@ class Event:
 # Everything is stored in one event list!
 # Generate Arrival events
 # wirklich notwendig rng zu übergeben oder reicht dann numpy dependency?
-def get_arrival(event_list: list, rng: np.random._generator.Generator, t: float):
+def get_arrival(
+    event_list: list[Union[int, Event]], rng: np.random._generator.Generator, t: float
+):
     t_arrival = t + rng.exponential()
     raise NotImplementedError
 
@@ -85,13 +90,14 @@ def simulation(
     num_cc: int,
     num_sc: int,
     t_max: float,
-    run_num: int,
+    # define number of simulations in function or create a for loop outside?
+    run_num: int = 1,
 ) -> None:
 
     # initialize rng generator
     rng = np.random.default_rng(seed=42)
     # Initialize Event list
-    eventlist = []
+    eventlist: list[Union[int, Event]] = []
     heapq.heapify(eventlist)
     # Initialize time
     t = 0.0
@@ -108,7 +114,6 @@ def simulation(
         id = j + 1
         checkouts[key] = Checkout((j + 1), "sc")
 
-    print(checkouts)
     # method to advance time
     while t < t_max:
         t = t + 1
@@ -116,7 +121,8 @@ def simulation(
 
     # print loop for testing purposes
     for i in range(num_cc + num_sc):
-        print(checkouts[f"Checkout{i+1}"].ql)
+        print("------------------------------")
+        print(f"Checkout{i + 1} = {checkouts[f'Checkout{i + 1}']}")
 
 
-simulation(6, 2, 5, 4)
+simulation(3, 1, 100)

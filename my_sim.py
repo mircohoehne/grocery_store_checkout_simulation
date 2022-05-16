@@ -1,4 +1,5 @@
 import heapq
+
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
@@ -26,6 +27,9 @@ class Event:
     """class for keeping track of events"""
 
     # initialize variables for object
+    # init is set to false, so the counter doesn't reset every time
+    ev_id: int = field(default_factory=count().__next__, init=False)
+    """generate a new id when a class object is created, used for sorting purposes in heapq"""
     time: float
     """time at which event occurs"""
     kind: str
@@ -34,9 +38,6 @@ class Event:
     """customer that is handled"""
     c_id: int
     """id of checkout where event occurs"""
-    # init is set to false, so the counter doesn't reset every time
-    ev_id: int = field(default_factory=count().__next__, init=False)
-    """generate a new id when a class object is created, used for sorting purposes in heapq"""
 
     # define methods
     # unnötige methode?
@@ -81,10 +82,22 @@ class Checkout:
 
 ################### Static Methods ####################
 def get_arrival(
-        event_list: list[Union[int, Event]], rng: np.random.Generator, t: float
+    event_list,
+    ql_list: list[int],
+    rng: np.random.Generator,
+    t: float,
 ):
+    # calculate the max value in list
+    max_value = max(ql_list)
+    # search for max in list and return indices
+    max_index = [i for i, m in enumerate(ql_list) if m == max_value]
+    # choose randomly from list and increment by 1, since Checkouts start at 1
+    c_id = rng.choice(max_index) + 1
     t_arrival = t + rng.exponential()
-    raise NotImplementedError
+    # create new event
+    new_arr = Event(t_arrival, "arr", Customer(t_arrival), c_id)
+    # push event into heapq, use ev_id for sorting if events occur at same time
+    heapq.heappush(event_list, (t_arrival, new_arr.ev_id, new_arr))
 
 
 def get_ql(sum_c: int, checkouts: dict) -> list[int]:
@@ -94,13 +107,15 @@ def get_ql(sum_c: int, checkouts: dict) -> list[int]:
     return ql_list
 
 
+# aus Simulation eine Klasse bauen und die statischen Methoden dort einfügen?
+# würde ziemlich viel sinn machen, dann mit self zu arbeiten
 ###################### Main Function #####################
 def simulation(
-        num_cc: int,
-        num_sc: int,
-        t_max: float,
-        # define number of simulations in function or create a for loop outside?
-        run_num: int = 1,
+    num_cc: int,
+    num_sc: int,
+    t_max: float,
+    # define number of simulations in function or create a for loop outside?
+    run_num: int = 1,
 ) -> None:
     # store nr. of checkouts
     sum_c = num_cc + num_sc
@@ -124,6 +139,8 @@ def simulation(
         key = f"Checkout{num}"
         checkouts[key] = Checkout(num, "sc")
 
+    ql_list = get_ql(sum_c, checkouts)
+    get_arrival(event_list, ql_list, rng, t)
     # method to advance time
     while t < t_max:
         t = t + 1
@@ -134,8 +151,7 @@ def simulation(
         print("------------------------------")
         print(f"Checkout{i + 1} = {checkouts[f'Checkout{i + 1}']}")
 
-    my_list = get_ql(sum_c, checkouts)
-    print(my_list)
+    print(event_list)
 
 
 simulation(3, 1, 100)

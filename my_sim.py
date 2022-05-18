@@ -1,5 +1,4 @@
 import heapq
-
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
@@ -7,6 +6,9 @@ from typing import Tuple, Union
 
 import numpy as np
 
+
+# TODO: Proc Rate als Variable einfügen
+# TODO: Arrival Rate als Variable einfügen!
 
 # initialized with slots to increase performance and frozen to prevent changing of values
 # muss frozen auf false gesetzt werden um departure Zeit zu erfassen?
@@ -21,7 +23,6 @@ class Customer:
     """generate an unique id for every customer"""
 
 
-# Überhaupt möglich mit heap event klasse zu speichern? muss sonst einfach die Zeit vor event objekt stehen?
 @dataclass(slots=True, frozen=True)
 class Event:
     """class for keeping track of events"""
@@ -50,8 +51,6 @@ class Event:
 
 # welchen Datentyp hat eigentlich Zeit? Int? → erstmal float nutzen
 # Everything is stored in one event list!
-# Generate Arrival events
-# wirklich notwendig rng zu übergeben oder reicht dann numpy dependency?
 
 
 @dataclass(slots=True)
@@ -107,15 +106,58 @@ def get_ql(sum_c: int, checkouts: dict) -> list[int]:
     return ql_list
 
 
+def arrival(
+        event_list: list[Union[Event, float]], rng: np.random.Generator, check_list: dict
+):
+    # grab first event from heapq
+    time, ev_id, current_event = heapq.heappop(event_list)
+    checkout = check_list[f"Checkout{current_event.c_id}"]
+    # if checkout is idle schedule departure event
+    if checkout.c_status == 0:
+        # generate processing time
+        proc_rate = rng.exponential()
+        # calculate new time
+        t_1 = time + proc_rate
+        # add new departure event
+        heapq.heappush(
+            event_list, Event(t_1, "dep", current_event.customer, current_event.c_id)
+        )
+        current_event.customer.dep_time = t_1
+        checkout.c_status = 1
+    else:
+        checkout.ql += 1
+    # generate new arrival event
+    inter_time = rng.exponential()
+    arr_time = inter_time + time
+    heapq.heappush(event_list, Event(arr_time, "arr", Customer(arr_time)))
+    raise NotImplementedError
+
+
+# TODO: departure funktion zu Ende schreiben!
+def departure(
+        event_list: list[Union[Event, float]], rng: np.random.Generator, check_list: dict
+):
+    # pop from heap
+    time, ev_id, current_event = heapq.heappop(event_list)
+    # get checkout object from dict
+    checkout = check_list[f"Checkouts{current_event.c_id}"]
+    # set checkout status to idle
+    checkout.c_status = 0
+    # check if events in queue
+    if checkout.ql > 0:
+        proc_rate = rng.exponential()
+    raise NotImplementedError
+
+
 # aus Simulation eine Klasse bauen und die statischen Methoden dort einfügen?
-# würde ziemlich viel sinn machen, dann mit self zu arbeiten
+# würde ziemlich viel sinn machen, dann mit self zu arbeiten -> ja, aber erst wenns einmal läuft
 ###################### Main Function #####################
 def simulation(
-    num_cc: int,
-    num_sc: int,
-    t_max: float,
-    # define number of simulations in function or create a for loop outside?
-    run_num: int = 1,
+        num_cc: int,
+        num_sc: int,
+        t_max: float,
+        # define number of simulations in function or create a for loop outside?
+        run_num: int = 1,
 ) -> None:
     # store nr. of checkouts
     sum_c = num_cc + num_sc

@@ -2,7 +2,7 @@ import heapq
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 from tqdm import tqdm
@@ -10,9 +10,6 @@ from tqdm import tqdm
 
 # TODO: Proc Rate als Variable einfügen
 # TODO: Arrival Rate als Variable einfügen!
-
-# initialized with slots to increase performance and frozen to prevent changing of values
-# muss frozen auf false gesetzt werden um departure Zeit zu erfassen?
 
 
 @dataclass(slots=True)
@@ -45,11 +42,11 @@ class Event:
 
     # define methods
     # unnötige methode?
-    def get_event_data(self) -> Tuple[float, str, int]:
-        """
-        :return: return event data for the event list
-        """
-        return self.time, self.kind, self.c_id
+    # def get_event_data(self) -> Tuple[float, str, int]:
+    #     """
+    #     :return: return event data for the event list
+    #     """
+    #     return self.time, self.kind, self.c_id
 
 
 # welchen Datentyp hat eigentlich Zeit? Int? → erstmal float nutzen
@@ -71,7 +68,8 @@ class Checkout:
     """queue length of the checkout"""
     c_quant: int = 1
     """ number of cashiers """
-    queue: list[Tuple[float, Customer]] = field(default_factory=list)
+    # TODO: Durch diese Implementierung parameter ql unnötig?
+    queue: List[Tuple[float, Customer]] = field(default_factory=List)
     """ list of costumers in queue"""
 
     # heapify the customer list, so
@@ -79,18 +77,8 @@ class Checkout:
         heapq.heapify(self.queue)
 
 
-# use heapq.heapify(list) to make list into heap and use heappush to insert elements
-# use time as the first value in tuple, this is the value that is sorted by!
-
-
-# queue length als counter bei jeder einzelnen kasse implementieren,
-# so kann das einfach vom arrival prozess abgefragt werden!
-# queue length als Liste für alle Kassen anlegen, so kann min gesucht
-# werden!
 # TODO: Customer Log einfügen -> bei jedem departure einfach customer übergeben?
 # TODO: Event Log einfügen -> bei jedem event pop einfach event in liste speichern?
-# Dataclass draus machen? oder nicht sinnvoll?
-# TODO: Progress Bar mit tqdm einfügen
 class Simulation:
     def __init__(
             self,
@@ -117,6 +105,9 @@ class Simulation:
         heapq.heapify(self.event_list)
         self.rng = np.random.default_rng(seed=s_seed)
         self.checkouts = {}
+        self.event_log = []
+        self.customer_log = []
+        self.queue_log = []
 
         for i in range(self.num_cc):
             num = i + 1
@@ -147,24 +138,38 @@ class Simulation:
         heapq.heappush(
             self.event_list, (t_arrival, new_arr.ev_id, new_arr.c_id, new_arr)
         )
+        # Customer stellt sich doch erst zum Zeitpunkt selber an, oder? -> in Implementierung egal, da log != ql
+        # und über ql Kasse ausgewählt wird.
+        # TODO: Checken ob richtig, siehe Kommentar Zeile drüber
         # put customer into checkout queue
         heapq.heappush(
             self.checkouts[f"Checkout{new_arr.c_id}"].queue,
             (new_customer.t_arr, new_customer),
         )
+        self.update_ql()
 
-    # TODO: Überhaupt noch notwendig, wenn eigene queue für jede Kasse vorhanden?
-    # Schon notwendig, da so implementiert. Vielleicht nochmal über andere Implementierung nachdenken!
-    # use ql_list as log for lists and use ql_list[-1] to choose most recent list
+    # use ql for checking
     def update_ql(self):
         new_ql = []
         for i in range(self.sum_c):
             new_ql.append(self.checkouts[f"Checkout{i + 1}"].ql)
-        self.ql_list.append(new_ql)
+        self.queue_log.append((self.t, new_ql))
+        self.ql_list = new_ql
 
+    # TODO: Arrival für SC Kassen schreiben
     def arrival(self):
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
+        # log event
+        self.event_log.append(
+            [
+                current_event.ev_id,
+                current_event.time,
+                current_event.kind,
+                current_event.customer,
+                current_event.c_id,
+            ]
+        )
         checkout = self.checkouts[f"Checkout{current_event.c_id}"]
         # if checkout is idle schedule departure event
         if checkout.c_status == 0:
@@ -179,7 +184,7 @@ class Simulation:
             # add departure time for customer
             current_event.customer.dep_time = t_1
             # TODO: 1. hier noch möglichkeit für sc einfügen, dass mehr Kapazität vorhanden ist
-            # TODO: 2. hier wird nämlich von Kapazität von 1 ausgegangen
+            # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
             # set c_status to 1 for busy
             checkout.c_status = 1
         else:
@@ -199,11 +204,20 @@ class Simulation:
         # )
         raise NotImplementedError
 
-    # TODO: Idee für Departures -> checkout id bei customer speichern oder pro checkout liste mit customers in line
-    # TODO: departure funktion zu Ende schreiben!
+    # TODO: departure für SC Kassen schreiben
     def departure(self):
         # pop from heap
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
+        # log event
+        self.event_log.append(
+            [
+                current_event.ev_id,
+                current_event.time,
+                current_event.kind,
+                current_event.customer,
+                current_event.c_id,
+            ]
+        )
         # get checkout object from dict
         checkout = self.checkouts[f"Checkouts{current_event.c_id}"]
         # set checkout status to idle
@@ -229,6 +243,15 @@ class Simulation:
             checkout.c_status = 1
             # decrease queue length
             checkout.ql -= 1
+            # log customer
+            self.customer_log.append(
+                [
+                    dep_customer.cust_id,
+                    dep_customer.t_arr,
+                    dep_customer.t_dep,
+                    proc_rate,
+                ]
+            )
         raise NotImplementedError
 
     def next_action(self):
@@ -236,6 +259,21 @@ class Simulation:
             self.arrival()
         elif self.event_list[0].kind == "dep":
             self.departure()
+
+    # TODO: Methode einfügen, die Simulation durchführt und als Eingabe Zahl bekommt,
+    #  wie oft Simulation durchgeführt werden soll -> erst später als Feature!
+    # Als statische Methode implementieren, die Dict mit einzelnen Parametern
+    # für die Simulationen bekommen soll? Also nicht nur festlegen wie oft, sondern auch
+    # unterschiedliche Parameter möglich?
+    # Dictionary: Keys -> Name der Simulation, Values -> Liste der Keywordargumente mit parametern
+    def simulate(self):
+        """
+        :return: Event- und Customer Log als Liste
+        """
+
+        # 1. Get initial Arrival
+
+        raise NotImplementedError
 
 
 def main():
@@ -252,10 +290,9 @@ def main():
 if __name__ == "__main__":
     main()
 
-# aus Simulation eine Klasse bauen und die statischen Methoden dort einfügen?
-# würde ziemlich viel sinn machen, dann mit self zu arbeiten → ja, aber erst, wenn es einmal läuft
-
-###################### Legacy Code ######################
+###############
+# Legacy Code #
+###############
 # def simulate(
 #     num_cc: int,
 #     num_sc: int,

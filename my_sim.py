@@ -5,6 +5,7 @@ from itertools import count
 from typing import Tuple, List
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -18,9 +19,11 @@ class Customer:
 
     # initialize Variables for Object
     t_arr: float
-    """arrival time of the customer"""
+    """ arrival time of the customer """
     cust_id: int = field(default_factory=count().__next__, init=False)
-    """generate an unique id for every customer"""
+    """ generate an unique id for every customer """
+    t_dep: float = 0
+    """ initialize departure time """
 
 
 @dataclass(slots=True, frozen=True)
@@ -30,15 +33,15 @@ class Event:
     # initialize variables for object
     # init is set to false, so the counter doesn't reset every time
     ev_id: int = field(default_factory=count().__next__, init=False)
-    """generate a new id when a class object is created, used for sorting purposes in heapq"""
+    """ generate a new id when a class object is created, used for sorting purposes in heapq """
     time: float
-    """time at which event occurs"""
+    """ time at which event occurs """
     kind: str
-    """kind of event "arr": arrival and "dep": departure"""
+    """ kind of event "arr": arrival and "dep": departure """
     customer: object
-    """customer that is handled"""
+    """ customer that is handled """
     c_id: int
-    """id of checkout where event occurs"""
+    """ id of checkout where event occurs """
 
     # define methods
     # unnötige methode?
@@ -68,8 +71,10 @@ class Checkout:
     """queue length of the checkout"""
     c_quant: int = 1
     """ number of cashiers """
+    sc_quant: int = 6
     # TODO: Durch diese Implementierung parameter ql unnötig?
-    queue: List[Tuple[float, Customer]] = field(default_factory=List)
+    # Optimierung später!
+    queue: List[Tuple[float, Customer]] = field(default_factory=list)
     """ list of costumers in queue"""
 
     # heapify the customer list, so
@@ -82,11 +87,11 @@ class Checkout:
 class Simulation:
     def __init__(
             self,
-            s_seed: int,
-            t_max=1000,
-            proc_rate_cc=1,
-            proc_rate_sc=1,
-            arrival_rate=1,
+            s_seed: int = 42,
+            t_max: float = 1000,
+            proc_rate_cc: int = 1,
+            proc_rate_sc: int = 1,
+            arrival_rate: int = 1,
             num_cc: int = 6,
             num_sc: int = 1,
     ):
@@ -140,6 +145,9 @@ class Simulation:
         )
         # Customer stellt sich doch erst zum Zeitpunkt selber an, oder? -> in Implementierung egal, da log != ql
         # und über ql Kasse ausgewählt wird.
+        # ABER: kann man auch anders implementieren. Dann muss Codeblock doch nur in Arrival geschoben werden,
+        # oder nicht?
+        # Dann stellt sich Customer bei Arrival an
         # TODO: Checken ob richtig, siehe Kommentar Zeile drüber
         # put customer into checkout queue
         heapq.heappush(
@@ -156,7 +164,7 @@ class Simulation:
         self.queue_log.append((self.t, new_ql))
         self.ql_list = new_ql
 
-    # TODO: Arrival für SC Kassen schreiben
+    # TODO: Unterschied SC und CC in Arrival implementieren
     def arrival(self):
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -204,7 +212,7 @@ class Simulation:
         # )
         raise NotImplementedError
 
-    # TODO: departure für SC Kassen schreiben
+    # TODO: Unterschied SC und CC in departure implementieren
     def departure(self):
         # pop from heap
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -226,7 +234,7 @@ class Simulation:
         # TODO: nächstes event in der queue an der Kasse abgreifen und departure planen
         if checkout.ql > 0:
             # generate random processing time
-            proc_rate = self.rng.exponential()
+            proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate departure time
             t_dep = self.t + proc_rate
             # pop Customer from checkout queue
@@ -268,22 +276,41 @@ class Simulation:
     # Dictionary: Keys -> Name der Simulation, Values -> Liste der Keywordargumente mit parametern
     def simulate(self):
         """
-        :return: Event- und Customer Log als Liste
+        :return: Event-, Customer- und queue Log als Liste
         """
 
         # 1. Get initial Arrival
+        self.get_arrival()
+        # 2. process events until time limit is reached
+        # TODO: Funktionen ober so umbauen, dass queue- und log updates in dieser Funktion stattfinden
+        pbar = tqdm(total=self.t_max + 1)
+        while self.t < self.t_max:
+            self.next_action()
+            pbar.update(1)
 
-        raise NotImplementedError
+        return self.event_log, self.customer_log, self.queue_log
 
 
 def main():
-    t = 0
-    pbar = tqdm(total=100000 + 1)
-    while t <= 100000:
-        t += 1
-        pbar.update(1)
-    pbar.close()
-    return print("Done")
+    my_sim = Simulation()
+    ev_log, c_log, q_log = my_sim.simulate()
+
+    ev_df = pd.DataFrame(ev_log)
+    c_df = pd.DataFrame(c_log)
+    q_df = pd.DataFrame(q_log)
+
+    ev_df.to_csv("event_log.csv")
+    c_df.to_csv("customer_log.csv")
+    q_df.to_csv("queue_log")
+
+    # Legacy Code
+    # t = 0
+    # pbar = tqdm(total=100000 + 1)
+    # while t <= 100000:
+    #     t += 1
+    #     pbar.update(1)
+    # pbar.close()
+    # return print("Done")
 
 
 # signalize to reader of code that this is a script and not just a library

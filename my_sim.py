@@ -65,7 +65,7 @@ class Checkout:
     """ id of the checkout """
     c_type: str
     """ type of the checkout"""
-    c_status = 0
+    c_status: int = 0
     """ status of the cashier"""
     ql: int = 0
     """queue length of the checkout"""
@@ -140,9 +140,7 @@ class Simulation:
         new_arr = Event(t_arrival, "arr", new_customer, c_id)
         # push event into heapq, use ev_id for sorting if events occur at same time
         # and c_id to schedule new events
-        heapq.heappush(
-            self.event_list, (t_arrival, new_arr.ev_id, new_arr.c_id, new_arr)
-        )
+        heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
         # Customer stellt sich doch erst zum Zeitpunkt selber an, oder? -> in Implementierung egal, da log != ql
         # und über ql Kasse ausgewählt wird.
         # ABER: kann man auch anders implementieren. Dann muss Codeblock doch nur in Arrival geschoben werden,
@@ -161,7 +159,7 @@ class Simulation:
         new_ql = []
         for i in range(self.sum_c):
             new_ql.append(self.checkouts[f"Checkout{i + 1}"].ql)
-        self.queue_log.append((self.t, new_ql))
+        self.queue_log.append((self.t, [new_ql[x] for x in range(self.sum_c)]))
         self.ql_list = new_ql
 
     # TODO: Unterschied SC und CC in Arrival implementieren
@@ -188,9 +186,9 @@ class Simulation:
             # create new event
             new_dep = Event(t_1, "dep", current_event.customer, current_event.c_id)
             # add new departure event
-            heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep.c_id, new_dep))
+            heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))
             # add departure time for customer
-            current_event.customer.dep_time = t_1
+            current_event.customer.t_dep = t_1
             # TODO: 1. hier noch möglichkeit für sc einfügen, dass mehr Kapazität vorhanden ist
             # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
             # set c_status to 1 for busy
@@ -210,7 +208,6 @@ class Simulation:
         #         Customer(arr_time),
         #     ),
         # )
-        raise NotImplementedError
 
     # TODO: Unterschied SC und CC in departure implementieren
     def departure(self):
@@ -227,7 +224,7 @@ class Simulation:
             ]
         )
         # get checkout object from dict
-        checkout = self.checkouts[f"Checkouts{current_event.c_id}"]
+        checkout = self.checkouts[f"Checkout{current_event.c_id}"]
         # set checkout status to idle
         checkout.c_status = 0
         # check if events in queue
@@ -244,9 +241,7 @@ class Simulation:
             # create new departure event
             new_dep = Event(t_dep, "dep", dep_customer, checkout.c_id)
             # create new departure event
-            heapq.heappush(
-                self.event_list, (t_dep, new_dep.ev_id, new_dep.c_id, new_dep)
-            )
+            heapq.heappush(self.event_list, (t_dep, new_dep.ev_id, new_dep))
             # set cashier status to busy
             checkout.c_status = 1
             # decrease queue length
@@ -260,12 +255,11 @@ class Simulation:
                     proc_rate,
                 ]
             )
-        raise NotImplementedError
 
     def next_action(self):
-        if self.event_list[0].kind == "arr":
+        if self.event_list[0][2].kind == "arr":
             self.arrival()
-        elif self.event_list[0].kind == "dep":
+        elif self.event_list[0][2].kind == "dep":
             self.departure()
 
     # TODO: Methode einfügen, die Simulation durchführt und als Eingabe Zahl bekommt,
@@ -273,7 +267,8 @@ class Simulation:
     # Als statische Methode implementieren, die Dict mit einzelnen Parametern
     # für die Simulationen bekommen soll? Also nicht nur festlegen wie oft, sondern auch
     # unterschiedliche Parameter möglich?
-    # Dictionary: Keys -> Name der Simulation, Values -> Liste der Keywordargumente mit parametern
+    # Dictionary: Keys -> Name der Simulation, Values -> Liste der Keyword argumente
+    # mit parametern
     def simulate(self):
         """
         :return: Event-, Customer- und queue Log als Liste
@@ -294,14 +289,18 @@ class Simulation:
 def main():
     my_sim = Simulation()
     ev_log, c_log, q_log = my_sim.simulate()
+    print(my_sim.checkouts.keys())
 
     ev_df = pd.DataFrame(ev_log)
+    ev_df.columns = ["event_id", "time", "kind", "customer", "checkout_id"]
     c_df = pd.DataFrame(c_log)
+    c_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
     q_df = pd.DataFrame(q_log)
+    q_df.columns = ["time", my_sim.checkouts.keys()]
 
-    ev_df.to_csv("event_log.csv")
-    c_df.to_csv("customer_log.csv")
-    q_df.to_csv("queue_log")
+    ev_df.to_csv("event_log.csv", index=False)
+    c_df.to_csv("customer_log.csv", index=False)
+    q_df.to_csv("queue_log.csv", index=False)
 
     # Legacy Code
     # t = 0

@@ -20,7 +20,7 @@ class Customer:
     # initialize Variables for Object
     t_arr: float
     """ arrival time of the customer """
-    cust_id: int = field(default_factory=count().__next__, init=False)
+    cust_id: int = field(default_factory=count(start=1).__next__, init=False)
     """ generate an unique id for every customer """
     t_dep: float = 0
     """ initialize departure time """
@@ -32,7 +32,7 @@ class Event:
 
     # initialize variables for object
     # init is set to false, so the counter doesn't reset every time
-    ev_id: int = field(default_factory=count().__next__, init=False)
+    ev_id: int = field(default_factory=count(start=1).__next__, init=False)
     """ generate a new id when a class object is created, used for sorting purposes in heapq """
     time: float
     """ time at which event occurs """
@@ -42,14 +42,6 @@ class Event:
     """ customer that is handled """
     c_id: int
     """ id of checkout where event occurs """
-
-    # define methods
-    # unnötige methode?
-    # def get_event_data(self) -> Tuple[float, str, int]:
-    #     """
-    #     :return: return event data for the event list
-    #     """
-    #     return self.time, self.kind, self.c_id
 
 
 # welchen Datentyp hat eigentlich Zeit? Int? → erstmal float nutzen
@@ -172,7 +164,7 @@ class Simulation:
                 current_event.ev_id,
                 current_event.time,
                 current_event.kind,
-                current_event.customer,
+                current_event.customer.cust_id,
                 current_event.c_id,
             ]
         )
@@ -197,17 +189,6 @@ class Simulation:
             checkout.ql += 1
         # generate new arrival event
         self.get_arrival()
-        # Legacy Code ersetzt durch funktion drüber
-        # inter_time = self.rng.exponential(self.arrival_rate)
-        # arr_time = inter_time + time
-        # heapq.heappush(
-        #     self.event_list,
-        #     Event(
-        #         arr_time,
-        #         "arr",
-        #         Customer(arr_time),
-        #     ),
-        # )
 
     # TODO: Unterschied SC und CC in departure implementieren
     def departure(self):
@@ -219,7 +200,7 @@ class Simulation:
                 current_event.ev_id,
                 current_event.time,
                 current_event.kind,
-                current_event.customer,
+                current_event.customer.cust_id,
                 current_event.c_id,
             ]
         )
@@ -289,68 +270,20 @@ class Simulation:
 def main():
     my_sim = Simulation()
     ev_log, c_log, q_log = my_sim.simulate()
-    print(my_sim.checkouts.keys())
 
     ev_df = pd.DataFrame(ev_log)
-    ev_df.columns = ["event_id", "time", "kind", "customer", "checkout_id"]
+    ev_df.columns = ["event_id", "time", "kind", "customer_id", "checkout_id"]
     c_df = pd.DataFrame(c_log)
     c_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
+    # TODO: Header schick machen und Werte vernünftig einsortieren
     q_df = pd.DataFrame(q_log)
-    q_df.columns = ["time", my_sim.checkouts.keys()]
+    q_df.columns = ["time", [key for key in my_sim.checkouts.keys()]]
 
     ev_df.to_csv("event_log.csv", index=False)
     c_df.to_csv("customer_log.csv", index=False)
     q_df.to_csv("queue_log.csv", index=False)
 
-    # Legacy Code
-    # t = 0
-    # pbar = tqdm(total=100000 + 1)
-    # while t <= 100000:
-    #     t += 1
-    #     pbar.update(1)
-    # pbar.close()
-    # return print("Done")
-
 
 # signalize to reader of code that this is a script and not just a library
 if __name__ == "__main__":
     main()
-
-###############
-# Legacy Code #
-###############
-# def simulate(
-#     num_cc: int,
-#     num_sc: int,
-#     t_max: float,
-#     # define number of simulations in function or create a for loop outside?
-#     run_num: int = 1,
-# ) -> None:
-#     # store nr. of checkouts
-#     sum_c = num_cc + num_sc
-#     # initialize rng generator
-#     rng = np.random.default_rng(seed=42)
-#     # Initialize Event list
-#     event_list: list[Union[int, Event]] = []
-#     heapq.heapify(event_list)
-#     # Initialize time
-#     t = 0.0
-#     # initialize dictionary that holds the Checkout object
-#     checkouts = {}
-#
-#
-#     get_arrival(event_list, ql_list, rng, t)
-#     # method to advance time
-#     while t < t_max:
-#         t = t + 1
-#         pass
-#
-#     # print loop for testing purposes
-#     for i in range(num_cc + num_sc):
-#         print("------------------------------")
-#         print(f"Checkout{i + 1} = {checkouts[f'Checkout{i + 1}']}")
-#
-#     print(event_list)
-#
-#
-# simulation(3, 1, 100)

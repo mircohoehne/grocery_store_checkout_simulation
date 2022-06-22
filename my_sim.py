@@ -24,6 +24,8 @@ class Customer:
     """ generate an unique id for every customer """
     t_dep: float = 0
     """ initialize departure time """
+    t_proc: float = 0
+    """ initialize processing time """
 
 
 @dataclass(slots=True, frozen=True)
@@ -179,8 +181,9 @@ class Simulation:
             new_dep = Event(t_1, "dep", current_event.customer, current_event.c_id)
             # add new departure event
             heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))
-            # add departure time for customer
+            # add departure and processing time for customer
             current_event.customer.t_dep = t_1
+            current_event.customer.t_proc = proc_rate
             # TODO: 1. hier noch möglichkeit für sc einfügen, dass mehr Kapazität vorhanden ist
             # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
             # set c_status to 1 for busy
@@ -210,6 +213,7 @@ class Simulation:
         checkout.c_status = 0
         # check if events in queue
         # TODO: nächstes event in der queue an der Kasse abgreifen und departure planen
+
         if checkout.ql > 0:
             # generate random processing time
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
@@ -217,7 +221,7 @@ class Simulation:
             t_dep = self.t + proc_rate
             # pop Customer from checkout queue
             _, dep_customer = heapq.heappop(checkout.queue)
-            # set departure time for log
+            # set departure and processing time for log
             dep_customer.t_dep = t_dep
             # create new departure event
             new_dep = Event(t_dep, "dep", dep_customer, checkout.c_id)
@@ -227,15 +231,15 @@ class Simulation:
             checkout.c_status = 1
             # decrease queue length
             checkout.ql -= 1
-            # log customer
-            self.customer_log.append(
-                [
-                    dep_customer.cust_id,
-                    dep_customer.t_arr,
-                    dep_customer.t_dep,
-                    proc_rate,
-                ]
-            )
+        # log customer
+        self.customer_log.append(
+            [
+                current_event.customer.cust_id,
+                current_event.customer.t_arr,
+                current_event.customer.t_dep,
+                current_event.customer.t_proc,
+            ]
+        )
 
     def next_action(self):
         if self.event_list[0][2].kind == "arr":
@@ -258,17 +262,19 @@ class Simulation:
         # 1. Get initial Arrival
         self.get_arrival()
         # 2. process events until time limit is reached
-        # TODO: Funktionen ober so umbauen, dass queue- und log updates in dieser Funktion stattfinden
-        pbar = tqdm(total=self.t_max + 1)
-        while self.t < self.t_max:
-            self.next_action()
-            pbar.update(1)
+        # TODO: Funktionen ober so umbauen, dass queue- und log updates in dieser Funktion stattfinden?
+        with tqdm(total=(self.t_max), unit_scale=True) as pbar:
+            while self.t < self.t_max:
+                t_old = float(self.t)
+                self.next_action()
+                t_delta = float(self.t) - t_old
+                pbar.update(t_delta)
 
         return self.event_log, self.customer_log, self.queue_log
 
 
 def main():
-    my_sim = Simulation()
+    my_sim = Simulation(arrival_rate=)
     ev_log, c_log, q_log = my_sim.simulate()
 
     ev_df = pd.DataFrame(ev_log)

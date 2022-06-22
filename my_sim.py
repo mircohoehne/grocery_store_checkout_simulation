@@ -1,5 +1,4 @@
 import heapq
-
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
@@ -156,7 +155,7 @@ class Simulation:
     def update_ql(self):
         new_ql = []
         for i in range(self.sum_c):
-            new_ql.append(self.checkouts[f"Checkout{i + 1}"].ql)
+            new_ql.append(len(self.checkouts[f"Checkout{i + 1}"].queue))
         self.queue_log.append((self.t, [new_ql[x] for x in range(self.sum_c)]))
         self.ql_list = new_ql
 
@@ -233,8 +232,7 @@ class Simulation:
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate departure time
             t_dep = self.t + proc_rate
-            # TODO: pop funktioniert nur innerhalb dieser Funktion! muss auch klappen, wenn keine Schlange an kasse ist
-            # pop Customer from checkout queue
+            # get customer from checkout queue
             dep_customer = checkout.queue[0][2]
             # set departure and processing time for log
             dep_customer.t_dep = t_dep
@@ -289,7 +287,7 @@ class Simulation:
 
 
 def main():
-    my_sim = Simulation()
+    my_sim = Simulation(arrival_rate=0.1)
     ev_log, c_log, q_log = my_sim.simulate()
 
     ev_df = pd.DataFrame(ev_log)

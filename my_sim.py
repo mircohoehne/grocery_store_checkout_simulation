@@ -1,4 +1,5 @@
 import heapq
+
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
@@ -68,7 +69,7 @@ class Checkout:
     sc_quant: int = 6
     # TODO: Durch diese Implementierung parameter ql unnötig?
     # Optimierung später!
-    queue: List[Tuple[float, Customer]] = field(default_factory=list)
+    queue: List[Tuple[float, int, Customer]] = field(default_factory=list)
     """ list of costumers in queue"""
 
     # heapify the customer list, so
@@ -80,14 +81,14 @@ class Checkout:
 # TODO: Event Log einfügen -> bei jedem event pop einfach event in liste speichern?
 class Simulation:
     def __init__(
-            self,
-            s_seed: int = 42,
-            t_max: float = 1000,
-            proc_rate_cc: int = 1,
-            proc_rate_sc: int = 1,
-            arrival_rate: int = 1,
-            num_cc: int = 6,
-            num_sc: int = 1,
+        self,
+        s_seed: int = 42,
+        t_max: float = 1000,
+        proc_rate_cc: int = 1,
+        proc_rate_sc: int = 1,
+        arrival_rate: int = 1,
+        num_cc: int = 6,
+        num_sc: int = 1,
     ):
         # TODO: Checken ob so korrekt implementiert
         # initialize Values
@@ -127,7 +128,7 @@ class Simulation:
         # choose randomly from list and increment by 1, since Checkouts start at 1
         c_id = self.rng.choice(min_index) + 1
         # TODO: nochmal checken ob hier richtig!
-        t_arrival = self.t + self.rng.exponential(self.arrival_rate)
+        t_arrival = self.t + self.rng.poisson(self.arrival_rate)
         # create new customer
         new_customer = Customer(t_arrival)
         # create new event
@@ -142,13 +143,16 @@ class Simulation:
         # Dann stellt sich Customer bei Arrival an
         # TODO: Checken ob richtig, siehe Kommentar Zeile drüber
         # put customer into checkout queue
+        """      
         heapq.heappush(
             self.checkouts[f"Checkout{new_arr.c_id}"].queue,
             (new_customer.t_arr, new_customer),
         )
         self.update_ql()
+        """
 
     # use ql for checking
+    # TODO: länge des checkout queue an sich nehmen und nicht einfach nur nummer speichern
     def update_ql(self):
         new_ql = []
         for i in range(self.sum_c):
@@ -171,6 +175,16 @@ class Simulation:
             ]
         )
         checkout = self.checkouts[f"Checkout{current_event.c_id}"]
+        # push customer into queue
+        heapq.heappush(
+            self.checkouts[f"Checkout{current_event.c_id}"].queue,
+            (
+                current_event.customer.t_arr,
+                current_event.customer.cust_id,
+                current_event.customer,
+            ),
+        )
+        self.update_ql()
         # if checkout is idle schedule departure event
         if checkout.c_status == 0:
             # generate processing time
@@ -211,16 +225,17 @@ class Simulation:
         checkout = self.checkouts[f"Checkout{current_event.c_id}"]
         # set checkout status to idle
         checkout.c_status = 0
-        # check if events in queue
-        # TODO: nächstes event in der queue an der Kasse abgreifen und departure planen
+        # pop leaving customer from respective queue
+        heapq.heappop(checkout.queue)
 
         if checkout.ql > 0:
             # generate random processing time
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate departure time
             t_dep = self.t + proc_rate
+            # TODO: pop funktioniert nur innerhalb dieser Funktion! muss auch klappen, wenn keine Schlange an kasse ist
             # pop Customer from checkout queue
-            _, dep_customer = heapq.heappop(checkout.queue)
+            dep_customer = checkout.queue[0][2]
             # set departure and processing time for log
             dep_customer.t_dep = t_dep
             # create new departure event
@@ -263,7 +278,7 @@ class Simulation:
         self.get_arrival()
         # 2. process events until time limit is reached
         # TODO: Funktionen ober so umbauen, dass queue- und log updates in dieser Funktion stattfinden?
-        with tqdm(total=(self.t_max), unit_scale=True) as pbar:
+        with tqdm(total=self.t_max, unit_scale=True) as pbar:
             while self.t < self.t_max:
                 t_old = float(self.t)
                 self.next_action()
@@ -274,7 +289,7 @@ class Simulation:
 
 
 def main():
-    my_sim = Simulation(arrival_rate=)
+    my_sim = Simulation()
     ev_log, c_log, q_log = my_sim.simulate()
 
     ev_df = pd.DataFrame(ev_log)

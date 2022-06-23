@@ -40,7 +40,7 @@ class Event:
     time: float
     """ time at which event occurs """
     kind: str
-    """ kind of event "arr": arrival and "dep": departure """
+    """ kind of event ("arr": arrival and "dep": departure) """
     customer: object
     """ customer that is handled """
     c_id: int

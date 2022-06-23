@@ -9,8 +9,9 @@ import pandas as pd
 from tqdm import tqdm
 
 
-# TODO: Proc Rate als Variable einfügen
-# TODO: Arrival Rate als Variable einfügen!
+# TODO: Unterschied SC und CC einfügen
+# TODO: Unterschiedliche Kapazitäten einfügen
+# TODO: Unterschiedliches handling in SC und CC einfügen
 
 
 @dataclass(slots=True)
@@ -76,8 +77,6 @@ class Checkout:
         heapq.heapify(self.queue)
 
 
-# TODO: Customer Log einfügen -> bei jedem departure einfach customer übergeben?
-# TODO: Event Log einfügen -> bei jedem event pop einfach event in liste speichern?
 class Simulation:
     def __init__(
         self,
@@ -127,7 +126,7 @@ class Simulation:
         # choose randomly from list and increment by 1, since Checkouts start at 1
         c_id = self.rng.choice(min_index) + 1
         # TODO: nochmal checken ob hier richtig!
-        t_arrival = self.t + self.rng.poisson(self.arrival_rate)
+        t_arrival = self.t + self.rng.exponential(self.arrival_rate)
         # create new customer
         new_customer = Customer(t_arrival)
         # create new event
@@ -135,20 +134,6 @@ class Simulation:
         # push event into heapq, use ev_id for sorting if events occur at same time
         # and c_id to schedule new events
         heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
-        # Customer stellt sich doch erst zum Zeitpunkt selber an, oder? -> in Implementierung egal, da log != ql
-        # und über ql Kasse ausgewählt wird.
-        # ABER: kann man auch anders implementieren. Dann muss Codeblock doch nur in Arrival geschoben werden,
-        # oder nicht?
-        # Dann stellt sich Customer bei Arrival an
-        # TODO: Checken ob richtig, siehe Kommentar Zeile drüber
-        # put customer into checkout queue
-        """      
-        heapq.heappush(
-            self.checkouts[f"Checkout{new_arr.c_id}"].queue,
-            (new_customer.t_arr, new_customer),
-        )
-        self.update_ql()
-        """
 
     # use ql for checking
     # TODO: länge des checkout queue an sich nehmen und nicht einfach nur nummer speichern
@@ -201,8 +186,6 @@ class Simulation:
             # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
             # set c_status to 1 for busy
             checkout.c_status = 1
-        else:
-            checkout.ql += 1
         # generate new arrival event
         self.get_arrival()
 
@@ -227,7 +210,7 @@ class Simulation:
         # pop leaving customer from respective queue
         heapq.heappop(checkout.queue)
 
-        if checkout.ql > 0:
+        if len(checkout.queue) > 0:
             # generate random processing time
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate departure time
@@ -242,8 +225,7 @@ class Simulation:
             heapq.heappush(self.event_list, (t_dep, new_dep.ev_id, new_dep))
             # set cashier status to busy
             checkout.c_status = 1
-            # decrease queue length
-            checkout.ql -= 1
+
         # log customer
         self.customer_log.append(
             [
@@ -287,7 +269,7 @@ class Simulation:
 
 
 def main():
-    my_sim = Simulation(arrival_rate=0.1)
+    my_sim = Simulation(arrival_rate=5)
     ev_log, c_log, q_log = my_sim.simulate()
 
     ev_df = pd.DataFrame(ev_log)

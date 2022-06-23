@@ -274,11 +274,19 @@ def main():
 
     ev_df = pd.DataFrame(ev_log)
     ev_df.columns = ["event_id", "time", "kind", "customer_id", "checkout_id"]
+
     c_df = pd.DataFrame(c_log)
     c_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
+
     # TODO: Header schick machen und Werte vernünftig einsortieren
     q_df = pd.DataFrame(q_log)
-    q_df.columns = ["time", [key for key in my_sim.checkouts.keys()]]
+    q_df.columns = [
+        "time",
+        "c_ql",
+    ]
+    columns = [key for key in my_sim.checkouts.keys()]
+    q_df[columns] = pd.DataFrame(q_df.c_ql.to_list(), index=q_df.index)
+    q_df.drop("c_ql", inplace=True, axis=1)
 
     ev_df.to_csv("event_log.csv", index=False)
     c_df.to_csv("customer_log.csv", index=False)

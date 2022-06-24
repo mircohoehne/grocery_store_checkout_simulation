@@ -1,4 +1,5 @@
 import heapq
+import warnings
 # use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
@@ -8,10 +9,15 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+# ignore Warning, that the progress bar might go slightly over 100% due to rounding error
+warnings.filterwarnings("ignore", module="tqdm")
 
+
+# TODO: Logs direkt in vernünftigem Format ausgeben, sodass direkt nutzbar
 # TODO: Unterschied SC und CC einfügen
 # TODO: Unterschiedliche Kapazitäten einfügen
 # TODO: Unterschiedliches handling in SC und CC einfügen
+# TODO: proc_num durch len(checkout.processing) ersetzen
 
 
 @dataclass(slots=True)
@@ -60,6 +66,7 @@ class Checkout:
     """ id of the checkout """
     c_type: str
     """ type of the checkout"""
+    # initialisierung von c_status und proc_num in post init, da keine Variable?
     c_status: int = 0
     """ status of the cashier"""
     ql: int = 0
@@ -67,26 +74,34 @@ class Checkout:
     c_quant: int = 1
     """ number of cashiers """
     sc_quant: int = 6
+    """ number of self checkouts """
+    proc_num: int = 0
+    """ number of customers in processing """
     # TODO: Durch diese Implementierung parameter ql unnötig?
     # Optimierung später!
     queue: List[Tuple[float, int, Customer]] = field(default_factory=list)
     """ list of costumers in queue"""
+    processing: List[Tuple[float, int, Customer]] = field(default_factory=list)
+    """ list of customers in processing """
 
-    # heapify the customer list, so
+    # heapify the queue and processing list
     def __post_init__(self):
         heapq.heapify(self.queue)
+        heapq.heapify(self.processing)
 
 
 class Simulation:
     def __init__(
-        self,
-        s_seed: int = 42,
-        t_max: float = 1000,
-        proc_rate_cc: int = 1,
-        proc_rate_sc: int = 1,
-        arrival_rate: int = 1,
-        num_cc: int = 6,
-        num_sc: int = 1,
+            self,
+            s_seed: int = 42,
+            t_max: float = 1000,
+            proc_rate_cc: int = 1,
+            proc_rate_sc: int = 1,
+            arrival_rate: int = 1,
+            num_cc: int = 6,
+            num_sc: int = 1,
+            c_quant: int = 1,
+            sc_quant: int = 6,
     ):
         # TODO: Checken ob so korrekt implementiert
         # initialize Values
@@ -106,15 +121,17 @@ class Simulation:
         self.event_log = []
         self.customer_log = []
         self.queue_log = []
+        self.c_quant = c_quant
+        self.sc_quant = sc_quant
 
         for i in range(self.num_cc):
             num = i + 1
             key = f"Checkout{num}"
-            self.checkouts[key] = Checkout(num, "cc")
+            self.checkouts[key] = Checkout(num, "cc", c_quant=self.c_quant)
         for j in range(self.num_cc, self.sum_c):
             num = j + 1
             key = f"Checkout{num}"
-            self.checkouts[key] = Checkout(num, "sc")
+            self.checkouts[key] = Checkout(num, "sc", sc_quant=self.sc_quant)
         # Initialize the ql_list
         self.update_ql()
 
@@ -171,6 +188,9 @@ class Simulation:
         self.update_ql()
         # if checkout is idle schedule departure event
         if checkout.c_status == 0:
+            # transfer customer from checkout queue to processing queue
+            _, _, proc_customer = heapq.heappop(checkout.queue)
+            heapq.heappush(checkout.processing, (proc_customer.t_dep, proc_customer.cust_id, proc_customer))
             # generate processing time
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate new time
@@ -184,8 +204,16 @@ class Simulation:
             current_event.customer.t_proc = proc_rate
             # TODO: 1. hier noch möglichkeit für sc einfügen, dass mehr Kapazität vorhanden ist
             # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
-            # set c_status to 1 for busy
-            checkout.c_status = 1
+            # Increment Customers in Processing
+            checkout.proc_num += 1
+            # check if capacity of cashier is reached and set status to busy
+            if checkout.c_type == "cc":
+                if checkout.proc_num == checkout.c_quant:
+                    checkout.c_status = 1
+            elif checkout.c_type == "sc":
+                if checkout.proc_num == checkout.sc_quant:
+                    checkout.c_status = 1
+
         # generate new arrival event
         self.get_arrival()
 
@@ -205,10 +233,12 @@ class Simulation:
         )
         # get checkout object from dict
         checkout = self.checkouts[f"Checkout{current_event.c_id}"]
+        # decrease Customers in processing
+        checkout.proc_num -= 1
         # set checkout status to idle
         checkout.c_status = 0
         # pop leaving customer from respective queue
-        heapq.heappop(checkout.queue)
+        heapq.heappop(checkout.processing)
 
         if len(checkout.queue) > 0:
             # generate random processing time
@@ -223,8 +253,18 @@ class Simulation:
             new_dep = Event(t_dep, "dep", dep_customer, checkout.c_id)
             # create new departure event
             heapq.heappush(self.event_list, (t_dep, new_dep.ev_id, new_dep))
-            # set cashier status to busy
-            checkout.c_status = 1
+            # Increment Customers in Processing
+            checkout.proc_num += 1
+            # transfer customer from checkout queue to processing queue
+            _, _, proc_customer = heapq.heappop(checkout.queue)
+            heapq.heappush(checkout.processing, (proc_customer.t_dep, proc_customer.cust_id, proc_customer))
+            # check if capacity is reached and if so, change status
+            if checkout.c_type == "cc":
+                if checkout.proc_num == checkout.c_quant:
+                    checkout.c_status = 1
+            elif checkout.c_type == "sc":
+                if checkout.proc_num == checkout.sc_quant:
+                    checkout.c_status = 1
 
         # log customer
         self.customer_log.append(
@@ -265,11 +305,16 @@ class Simulation:
                 t_delta = float(self.t) - t_old
                 pbar.update(t_delta)
 
+        # TODO: hier data wrangling einfügen, damit logs direkt für Datenanalyse genutzt werden können
+
         return self.event_log, self.customer_log, self.queue_log
 
 
 def main():
-    my_sim = Simulation(arrival_rate=5)
+    my_sim = Simulation(
+        arrival_rate=1,
+        num_cc=4,
+    )
     ev_log, c_log, q_log = my_sim.simulate()
 
     ev_df = pd.DataFrame(ev_log)

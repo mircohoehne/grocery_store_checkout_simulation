@@ -75,8 +75,6 @@ class Checkout:
     """ number of self checkouts """
     proc_num: int = 0
     """ number of customers in processing """
-    # TODO: Durch diese Implementierung parameter ql unnötig?
-    # Optimierung später!
     queue: List[Tuple[float, int, Customer]] = field(default_factory=list)
     """ list of costumers in queue"""
     processing: List[Tuple[float, int, Customer]] = field(default_factory=list)
@@ -101,9 +99,7 @@ class Simulation:
             c_quant: int = 1,
             sc_quant: int = 6,
     ):
-        # TODO: Checken ob so korrekt implementiert
-        # initialize Values
-        # initialize processing rates
+        # initialize parameters
         self.processing_rate = {"cc": proc_rate_cc, "sc": proc_rate_sc}
         self.arrival_rate = arrival_rate
         self.num_cc = num_cc
@@ -140,7 +136,7 @@ class Simulation:
         min_index = [i for i, m in enumerate(self.ql_list) if m == min_value]
         # choose randomly from list and increment by 1, since Checkouts start at 1
         c_id = self.rng.choice(min_index) + 1
-        # TODO: nochmal checken ob hier richtig!
+        # calculate arrival time
         t_arrival = self.t + self.rng.exponential(self.arrival_rate)
         # create new customer
         new_customer = Customer(t_arrival)
@@ -151,7 +147,6 @@ class Simulation:
         heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
 
     # use ql for checking
-    # TODO: länge des checkout queue an sich nehmen und nicht einfach nur nummer speichern
     def update_ql(self):
         new_ql = []
         for i in range(self.sum_c):
@@ -159,7 +154,6 @@ class Simulation:
         self.queue_log.append((self.t, [new_ql[x] for x in range(self.sum_c)]))
         self.ql_list = new_ql
 
-    # TODO: Unterschied SC und CC in Arrival implementieren
     def arrival(self):
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -203,8 +197,6 @@ class Simulation:
             # add departure and processing time for customer
             current_event.customer.t_dep = t_1
             current_event.customer.t_proc = proc_rate
-            # TODO: 1. hier noch möglichkeit für sc einfügen, dass mehr Kapazität vorhanden ist
-            # TODO: 2. hier wird  Kapazität bis jetzt auf 1 gesetzt
             # Increment Customers in Processing
             checkout.proc_num += 1
             # check if capacity of cashier is reached and set status to busy
@@ -218,7 +210,6 @@ class Simulation:
         # generate new arrival event
         self.get_arrival()
 
-    # TODO: Unterschied SC und CC in departure implementieren
     def departure(self):
         # pop from heap
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -301,7 +292,6 @@ class Simulation:
         # 1. Get initial Arrival
         self.get_arrival()
         # 2. process events until time limit is reached
-        # TODO: Funktionen ober so umbauen, dass queue- und log updates in dieser Funktion stattfinden?
         with tqdm(total=self.t_max, unit_scale=True) as pbar:
             while self.t < self.t_max:
                 t_old = float(self.t)
@@ -327,7 +317,6 @@ def main():
     c_df = pd.DataFrame(c_log)
     c_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
 
-    # TODO: Header schick machen und Werte vernünftig einsortieren
     q_df = pd.DataFrame(q_log)
     q_df.columns = [
         "time",

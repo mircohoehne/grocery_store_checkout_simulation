@@ -13,11 +13,11 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore", module="tqdm")
 
 
-# TODO: Logs direkt in vernünftigem Format ausgeben, sodass direkt nutzbar
-# TODO: Unterschied SC und CC einfügen
-# TODO: Unterschiedliche Kapazitäten einfügen
+# TODO: Logs direkt in vernünftigem Format ausgeben, sodass direkt nutzbar und nicht erst im programm ändern
 # TODO: Unterschiedliches handling in SC und CC einfügen
 # TODO: proc_num durch len(checkout.processing) ersetzen
+# TODO: Visualisierungen erstellen
+# TODO: Experiment Design festlegen
 
 
 @dataclass(slots=True)
@@ -69,8 +69,6 @@ class Checkout:
     # initialisierung von c_status und proc_num in post init, da keine Variable?
     c_status: int = 0
     """ status of the cashier"""
-    ql: int = 0
-    """queue length of the checkout"""
     c_quant: int = 1
     """ number of cashiers """
     sc_quant: int = 6
@@ -190,7 +188,10 @@ class Simulation:
         if checkout.c_status == 0:
             # transfer customer from checkout queue to processing queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
-            heapq.heappush(checkout.processing, (proc_customer.t_dep, proc_customer.cust_id, proc_customer))
+            heapq.heappush(
+                checkout.processing,
+                (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
+            )
             # generate processing time
             proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
             # calculate new time
@@ -257,7 +258,10 @@ class Simulation:
             checkout.proc_num += 1
             # transfer customer from checkout queue to processing queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
-            heapq.heappush(checkout.processing, (proc_customer.t_dep, proc_customer.cust_id, proc_customer))
+            heapq.heappush(
+                checkout.processing,
+                (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
+            )
             # check if capacity is reached and if so, change status
             if checkout.c_type == "cc":
                 if checkout.proc_num == checkout.c_quant:

@@ -17,22 +17,12 @@ warnings.filterwarnings("ignore", module="tqdm")
 # TODO: Unterschiedliches handling in SC und CC einfügen
 # TODO: proc_num durch len(checkout.processing) ersetzen
 # TODO: Visualisierungen erstellen
-# TODO: Experiment Design festlegen
-
-
-@dataclass(slots=True)
-class Customer:
-    """class to keep track of customers"""
-
-    # initialize Variables for Object
-    t_arr: float
-    """ arrival time of the customer """
-    cust_id: int = field(default_factory=count(start=1).__next__, init=False)
-    """ generate an unique id for every customer """
-    t_dep: float = 0
-    """ initialize departure time """
-    t_proc: float = 0
-    """ initialize processing time """
+# TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
+# TODO: Tendenz SC/CC zu nutzen pro Kunde generieren
+# TODO: Anzahl an Waren die Kunde einkauft generieren und entsprechend Service time anpassen
+# TODO: Normalverteilung für Service Time?
+# TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?)
+# TODO: unterschiedliche Verteilungen einbauen (oder direkt mehrere programme machen?)
 
 
 @dataclass(slots=True, frozen=True)
@@ -53,8 +43,21 @@ class Event:
     """ id of checkout where event occurs """
 
 
-# welchen Datentyp hat eigentlich Zeit? Int? → erstmal float nutzen
-# Everything is stored in one event list!
+@dataclass(slots=True)
+class Customer:
+    """class to keep track of customers"""
+
+    # initialize Variables for Object
+    t_arr: float
+    """ arrival time of the customer """
+    cust_id: int = field(default_factory=count(start=1).__next__, init=False)
+    """ generate an unique id for every customer """
+    t_dep: float = None
+    """ initialize departure time """
+    t_proc: float = None
+    """ initialize processing time """
+    num_items: int = None
+    """ number of items the customer wants to buy"""
 
 
 @dataclass(slots=True)
@@ -87,6 +90,7 @@ class Checkout:
 
 
 class Simulation:
+    """ Class for simulation of a supermarket"""
     def __init__(
             self,
             s_seed: int = 42,
@@ -98,6 +102,7 @@ class Simulation:
             num_sc: int = 1,
             c_quant: int = 1,
             sc_quant: int = 6,
+            item_scale: float = 14.528563291255535  # Scale parameter for exponential distribution
     ):
         # initialize parameters
         self.processing_rate = {"cc": proc_rate_cc, "sc": proc_rate_sc}
@@ -117,6 +122,7 @@ class Simulation:
         self.queue_log = []
         self.c_quant = c_quant
         self.sc_quant = sc_quant
+        self.item_scale = item_scale
 
         for i in range(self.num_cc):
             num = i + 1
@@ -130,6 +136,8 @@ class Simulation:
         self.update_ql()
 
     def get_arrival(self):
+        """ sample arrival time, choose shortest queue, generate a new_customer
+        and add the new arrival event to the event list of the class object """
         # calculate the min value in list
         min_value = min(self.ql_list)
         # search for max in list and return indices
@@ -138,8 +146,12 @@ class Simulation:
         c_id = self.rng.choice(min_index) + 1
         # calculate arrival time
         t_arrival = self.t + self.rng.exponential(self.arrival_rate)
+        # generate number of items the customer wants to buy
+        # scale is from the data analysis part
+        # assumption: no fractional items -> round up
+        num_items = np.ceil(self.rng.exponential(scale=self.item_scale))
         # create new customer
-        new_customer = Customer(t_arrival)
+        new_customer = Customer(t_arrival, num_items=num_items)
         # create new event
         new_arr = Event(t_arrival, "arr", new_customer, c_id)
         # push event into heapq, use ev_id for sorting if events occur at same time
@@ -148,6 +160,7 @@ class Simulation:
 
     # use ql for checking
     def update_ql(self):
+        """ update the list of queue lengths and write it to the queue log"""
         new_ql = []
         for i in range(self.sum_c):
             new_ql.append(len(self.checkouts[f"Checkout{i + 1}"].queue))
@@ -155,6 +168,11 @@ class Simulation:
         self.ql_list = new_ql
 
     def arrival(self):
+        """
+        pops the arrival event from the event list (first entry, since min-heap is used), and writes it to event log.
+        A customer is added to the respective checkout queue and the update_ql() method is called.
+        If the queue is empty the customer is processed ################ Zu ende schreiben  #############
+        """
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
         # log event
@@ -180,23 +198,33 @@ class Simulation:
         self.update_ql()
         # if checkout is idle schedule departure event
         if checkout.c_status == 0:
-            # transfer customer from checkout queue to processing queue
+            # pop customer from checkout queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
-            heapq.heappush(
-                checkout.processing,
-                (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
-            )
-            # generate processing time
-            proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
+            # generate processing time per item
+            # TODO: hier noch für entsprechende Kassentypen die richtigen Verteilungen einfügen
+            if checkout.c_type == 'cc':
+                proc_rate_per_item = self.rng.laplace(loc=3.7777777777777777, scale=2.1742325579116906)
+            elif checkout.c_type == 'sc':
+                proc_rate_per_item = self.rng.gumbel(loc=11.224246069610276, scale=6.208811868891992)
+            else:
+                raise ValueError('Checkout Type is neither "cc" nor "sc"')
+            # calculate processing time for all items
+            proc_rate = proc_rate_per_item * proc_customer.num_items
             # calculate new time
             t_1 = self.t + proc_rate
             # create new event
+            # TODO: current_event.customer durch proc_customer ersetzen? nochmal abchecken
             new_dep = Event(t_1, "dep", current_event.customer, current_event.c_id)
             # add new departure event
             heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))
             # add departure and processing time for customer
             current_event.customer.t_dep = t_1
             current_event.customer.t_proc = proc_rate
+            # put customer in processing queue
+            heapq.heappush(
+                checkout.processing,
+                (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
+            )
             # Increment Customers in Processing
             checkout.proc_num += 1
             # check if capacity of cashier is reached and set status to busy
@@ -234,11 +262,19 @@ class Simulation:
 
         if len(checkout.queue) > 0:
             # generate random processing time
-            proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
-            # calculate departure time
-            t_dep = self.t + proc_rate
+            # legacy code: proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
+            if checkout.c_type == 'cc':
+                proc_rate_per_item = self.rng.laplace(loc=3.7777777777777777, scale=2.1742325579116906)
+            elif checkout.c_type == 'sc':
+                proc_rate_per_item = self.rng.gumbel(loc=11.224246069610276, scale=6.208811868891992)
+            else:
+                raise ValueError('Checkout Type is neither "cc" nor "sc"')
             # get customer from checkout queue
             dep_customer = checkout.queue[0][2]
+            # calculate total proc_rate for all items
+            proc_rate = dep_customer.num_items * proc_rate_per_item
+            # calculate departure time
+            t_dep = self.t + proc_rate
             # set departure and processing time for log
             dep_customer.t_dep = t_dep
             # create new departure event
@@ -306,8 +342,8 @@ class Simulation:
 
 def main():
     my_sim = Simulation(
-        arrival_rate=1,
-        num_cc=4,
+        num_cc=16,
+        num_sc=6,
     )
     ev_log, c_log, q_log = my_sim.simulate()
 

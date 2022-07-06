@@ -14,14 +14,14 @@ warnings.filterwarnings("ignore", module="tqdm")
 
 
 # TODO: Logs direkt in vernünftigem Format ausgeben, sodass direkt nutzbar und nicht erst im programm ändern
-# TODO: Unterschiedliches handling in SC und CC einfügen
 # TODO: proc_num durch len(checkout.processing) ersetzen
 # TODO: Visualisierungen erstellen
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
 # TODO: Tendenz SC/CC zu nutzen pro Kunde generieren
 # TODO: Anzahl an Waren die Kunde einkauft generieren und entsprechend Service time anpassen
 # TODO: Normalverteilung für Service Time?
-# TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?)
+# TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?) -> über Verteilungen geregelt, aber
+# vielleicht für generelle implementierung noch wichtig
 # TODO: unterschiedliche Verteilungen einbauen (oder direkt mehrere programme machen?)
 
 
@@ -201,7 +201,7 @@ class Simulation:
             # pop customer from checkout queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
             # generate processing time per item
-            # TODO: hier noch für entsprechende Kassentypen die richtigen Verteilungen einfügen
+            # TODO: Parameter nicht hardcoden, sondern übergeben
             if checkout.c_type == 'cc':
                 proc_rate_per_item = self.rng.laplace(loc=3.7777777777777777, scale=2.1742325579116906)
             elif checkout.c_type == 'sc':

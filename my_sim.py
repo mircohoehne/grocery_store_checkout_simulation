@@ -95,9 +95,7 @@ class Checkout:
     """ list of customers in processing """
 
     # heapify the queue and processing list and make sure c_status is always 0,
-    # when class is created
     def __post_init__(self):
-        """ heapify the queue and processing queue of checkout """
         heapq.heapify(self.queue)
         heapq.heapify(self.processing)
 

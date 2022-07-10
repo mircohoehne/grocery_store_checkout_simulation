@@ -13,16 +13,15 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore", module="tqdm")
 
 
-# TODO: Logs direkt in vernünftigem Format ausgeben, sodass direkt nutzbar und nicht erst im programm ändern
 # TODO: proc_num durch len(checkout.processing) ersetzen
 # TODO: Visualisierungen erstellen
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
 # TODO: Tendenz SC/CC zu nutzen pro Kunde generieren
-# TODO: Anzahl an Waren die Kunde einkauft generieren und entsprechend Service time anpassen
+# TODO: Verteilungen für Service Time abstrahieren
 # TODO: Normalverteilung für Service Time?
 # TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?) -> über Verteilungen geregelt, aber
 # vielleicht für generelle implementierung noch wichtig
-# TODO: unterschiedliche Verteilungen einbauen (oder direkt mehrere programme machen?)
+# TODO: unterschiedliche Verteilungen einbauen
 
 
 @dataclass(slots=True, frozen=True)
@@ -68,7 +67,7 @@ class Checkout:
     c_id: int
     """ id of the checkout """
     c_type: str
-    """ type of the checkout"""
+    """ type of the checkout """
     # initialisierung von c_status und proc_num in post init, da keine Variable?
     c_status: int = 0
     """ status of the cashier"""
@@ -95,6 +94,7 @@ class Simulation:
             self,
             s_seed: int = 42,
             t_max: float = 1000,
+            # TODO: Hier unterschiedliche processing Verteilungen einfügen?
             proc_rate_cc: int = 1,
             proc_rate_sc: int = 1,
             arrival_rate: int = 1,
@@ -336,8 +336,22 @@ class Simulation:
                 pbar.update(t_delta)
 
         # TODO: hier data wrangling einfügen, damit logs direkt für Datenanalyse genutzt werden können
+        event_df = pd.DataFrame(self.event_log)
+        event_df.columns = ["event_id", "time", "kind", "customer_id", "checkout_id"]
 
-        return self.event_log, self.customer_log, self.queue_log
+        customer_df = pd.DataFrame(self.customer_log)
+        customer_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
+
+        queue_df = pd.DataFrame(self.queue_log)
+        queue_df.columns = [
+            "time",
+            "c_ql",
+        ]
+        columns = [key for key in self.checkouts.keys()]
+        queue_df[columns] = pd.DataFrame(queue_df.c_ql.to_list(), index=queue_df.index)
+        queue_df.drop("c_ql", inplace=True, axis=1)
+
+        return event_df, customer_df, queue_df
 
 
 def main():
@@ -345,26 +359,11 @@ def main():
         num_cc=16,
         num_sc=6,
     )
-    ev_log, c_log, q_log = my_sim.simulate()
+    event_log, customer_log, queue_log = my_sim.simulate()
 
-    ev_df = pd.DataFrame(ev_log)
-    ev_df.columns = ["event_id", "time", "kind", "customer_id", "checkout_id"]
-
-    c_df = pd.DataFrame(c_log)
-    c_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
-
-    q_df = pd.DataFrame(q_log)
-    q_df.columns = [
-        "time",
-        "c_ql",
-    ]
-    columns = [key for key in my_sim.checkouts.keys()]
-    q_df[columns] = pd.DataFrame(q_df.c_ql.to_list(), index=q_df.index)
-    q_df.drop("c_ql", inplace=True, axis=1)
-
-    ev_df.to_csv("event_log.csv", index=False)
-    c_df.to_csv("customer_log.csv", index=False)
-    q_df.to_csv("queue_log.csv", index=False)
+    event_log.to_csv("event_log1.csv", index=False)
+    customer_log.to_csv("customer_log1.csv", index=False)
+    queue_log.to_csv("queue_log1.csv", index=False)
 
 
 # signalize to reader of code that this is a script and not just a library

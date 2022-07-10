@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-# ignore Warning, that the progress bar might go slightly over 100% due to rounding error
+# ignore Warning, that the progress bar might go slightly over 100% due to rounding errors
 warnings.filterwarnings("ignore", module="tqdm")
 
 # TODO: Tendenz SC/CC zu nutzen pro Kunde generieren
@@ -55,9 +55,9 @@ class Event:
 @dataclass(slots=True)
 class Customer:
     """class to keep track of customers"""
-
+    tendency: float = None
+    """ tendency to choose a cashier checkout over self checkout"""
     # initialize Variables for Object
-
     t_arr: float = None
     """ arrival time of the customer """
     cust_id: int = field(default_factory=count(start=1).__next__, init=False)
@@ -69,6 +69,10 @@ class Customer:
     num_items: int = None
     """ number of items the customer wants to buy"""
 
+    def __post_init__(self):
+        # make sure the tendency is not incorrectly initialized
+        self.tendency = None
+
 
 @dataclass(slots=True)
 class Checkout:
@@ -79,7 +83,7 @@ class Checkout:
     """ id of the checkout """
     c_type: str
     """ type of the checkout """
-    c_status: int = None
+    c_status: int = 0
     """ status of the cashier/self-checkout {0: free, 1: Busy}"""
     c_quant: int = 1
     """ number of cashiers """
@@ -96,8 +100,6 @@ class Checkout:
         """ heapify the queue and processing queue of checkout """
         heapq.heapify(self.queue)
         heapq.heapify(self.processing)
-        # make sure c_status is always 0 when instance of class is created
-        self.c_status: int = 0
 
 
 class Simulation:

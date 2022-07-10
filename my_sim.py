@@ -104,9 +104,9 @@ class Simulation:
             s_seed: int = 42,
             t_max: float = 1000,
             # TODO: Hier unterschiedliche processing Verteilungen einfügen?
-            proc_rate_cc: int = 1,
-            proc_rate_sc: int = 1,
-            arrival_rate: int = 1,
+            proc_rate_cc: float = 2.5,
+            proc_rate_sc: float = 0.75,
+            arrival_rate: float = 1.0,
             num_cc: int = 6,
             num_sc: int = 1,
             c_quant: int = 1,
@@ -147,7 +147,7 @@ class Simulation:
     def get_arrival(self):
 
         """ If queuing mode is shortest:
-        sample arrival time, choose shortest queue, generate a new_customer and add the new arrival event to the
+        sample arrival time, choose the shortest queue, generate a new_customer and add the new arrival event to the
         event list of the class object
         """
         # calculate the min value in list

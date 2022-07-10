@@ -69,10 +69,6 @@ class Customer:
     num_items: int = None
     """ number of items the customer wants to buy"""
 
-    def __post_init__(self):
-        # make sure the tendency is not incorrectly initialized
-        self.tendency = None
-
 
 @dataclass(slots=True)
 class Checkout:
@@ -114,7 +110,8 @@ class Simulation:
             num_sc: int = 1,
             c_quant: int = 1,
             sc_quant: int = 6,
-            item_scale: float = 14.528563291255535  # Scale parameter for exponential distribution
+            item_scale: float = 14.528563291255535,  # Scale parameter for exponential distribution
+            queuing_mode: str = 'tendency'
     ):
         """ initialize parameters """
         self.processing_rate = {"cc": proc_rate_cc, "sc": proc_rate_sc}
@@ -135,6 +132,7 @@ class Simulation:
         self.c_quant = c_quant
         self.sc_quant = sc_quant
         self.item_scale = item_scale
+        self.queuing_mode = queuing_mode
 
         for i in range(self.num_cc):
             num = i + 1
@@ -150,26 +148,30 @@ class Simulation:
     def get_arrival(self):
         """ sample arrival time, choose shortest queue, generate a new_customer
         and add the new arrival event to the event list of the class object """
-
-        # calculate the min value in list
-        min_value = min(self.ql_list)
-        # search for max in list and return indices
-        min_index = [i for i, m in enumerate(self.ql_list) if m == min_value]
-        # choose randomly from list and increment by 1, since Checkouts start at 1
-        c_id = self.rng.choice(min_index) + 1
-        # calculate arrival time
-        t_arrival = self.t + self.rng.exponential(self.arrival_rate)
-        # generate number of items the customer wants to buy
-        # scale is from the data analysis part
-        # assumption: no fractional items -> round up
-        num_items = np.ceil(self.rng.exponential(scale=self.item_scale))
-        # create new customer
-        new_customer = Customer(t_arrival, num_items=num_items)
-        # create new event
-        new_arr = Event(t_arrival, "arr", new_customer, c_id)
-        # push event into heapq, use ev_id for sorting if events occur at same time
-        # and c_id to schedule new events
-        heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
+        if self.queuing_mode == 'shortest':
+            # calculate the min value in list
+            min_value = min(self.ql_list)
+            # search for max in list and return indices
+            min_index = [i for i, m in enumerate(self.ql_list) if m == min_value]
+            # choose randomly from list and increment by 1, since Checkouts start at 1
+            c_id = self.rng.choice(min_index) + 1
+            # calculate arrival time
+            t_arrival = self.t + self.rng.exponential(self.arrival_rate)
+            # generate number of items the customer wants to buy
+            # scale is from the data analysis part
+            # assumption: no fractional items -> round up
+            num_items = np.ceil(self.rng.exponential(scale=self.item_scale))
+            # create new customer
+            new_customer = Customer(t_arrival, num_items=num_items)
+            # create new event
+            new_arr = Event(t_arrival, "arr", new_customer, c_id)
+            # push event into heapq, use ev_id for sorting if events occur at same time
+            # and c_id to schedule new events
+            heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
+        elif self.queuing_mode == 'tendency':
+            pass
+        else:
+            raise NotImplementedError
 
     # use ql for checking
     def update_ql(self):

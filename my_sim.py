@@ -12,18 +12,11 @@ from tqdm import tqdm
 # ignore Warning, that the progress bar might go slightly over 100% due to rounding errors
 warnings.filterwarnings("ignore", module="tqdm")
 
-# TODO: Tendenz SC/CC zu nutzen pro Kunde generieren
-"""
-Ideen: 
-- Random generieren und mit threshold (parameter) abgleichen
-- Wenn SC gewählt wird liste Rückwärts gehen, wenn CC gewählt wird vorwärts 
-- Dafür dann nur die Liste Ziehen die notwendig ist und index entsprechend anpassend
- 
-"""
 # TODO: Verteilungen für Service Time abstrahieren
 """
 Funktionen als Parameter einbauen und dann normal und exponentialverteilung zusätzlich zu denen aus POS Daten einbauen
 """
+
 # TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?) -> für generelle Verteilungen evt. wichtig
 """
 bei genereller Implementierung (normal und exponentialverteilung) davon ausgehen, dass Kassierer doppelt so schnell 
@@ -31,7 +24,17 @@ wie Kunden beim scannen sind.
 """
 
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
+"""
+Experiment Design: 
+- POS Daten nutzen
+- Verteilungen herausfinden
+- Systemerweiterungen analysieren (Cashier Checkouts hinzufügen, Self Checkouts hinzufügen)
+Das muss genug sein! Normal und Exponentialverteilung werden eingebaut, aber werde ich nicht nutzen
+"""
 # TODO: Visualisierungen erstellen
+"""
+hier dann einfach Notebook einfügen und auch mit Visualisierungen zu unterschiedlichen Systemen schmücken
+"""
 
 
 @dataclass(slots=True, frozen=True)
@@ -55,8 +58,6 @@ class Event:
 @dataclass(slots=True)
 class Customer:
     """class to keep track of customers"""
-    tendency: float = None
-    """ tendency to choose a cashier checkout over self checkout"""
     # initialize Variables for Object
     t_arr: float = None
     """ arrival time of the customer """

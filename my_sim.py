@@ -12,20 +12,13 @@ from tqdm import tqdm
 # ignore Warning, that the progress bar might go slightly over 100% due to rounding errors
 warnings.filterwarnings("ignore", module="tqdm")
 
-# TODO: Verteilungen für Service Time abstrahieren
-"""
-Funktionen als Parameter einbauen und dann normal (?) und exponentialverteilung 
-zusätzlich zu denen aus POS Daten einbauen
-"""
-# TODO: Codefragmente die Duplikate sind zusammenführen
-
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
 """
 Experiment Design: 
-- POS Daten nutzen
-- Verteilungen herausfinden
+- POS Daten nutzen -> fertig
+- Verteilungen herausfinden -> fertig
 - Systemerweiterungen analysieren (Cashier Checkouts hinzufügen, Self Checkouts hinzufügen)
-Das muss genug sein! Normal und Exponentialverteilung werden eingebaut, aber werde ich nicht nutzen
+Das muss genug sein! Exponentialverteilung werden eingebaut, aber werde ich nicht nutzen
 """
 # TODO: Visualisierungen erstellen
 """
@@ -266,7 +259,7 @@ class Simulation:
                 checkout.processing,
                 (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
             )
-            # check if capacity of cashier is reached and set status to busy
+            # check if capacity of cashier is reached and if so, change status
             if checkout.c_type == "cc":
                 if len(checkout.processing) == checkout.c_quant:
                     checkout.c_status = 1
@@ -353,7 +346,7 @@ class Simulation:
                 checkout.processing,
                 (proc_customer.t_dep, proc_customer.cust_id, proc_customer),
             )
-            # check if capacity is reached and if so, change status
+            # check if capacity of cashier is reached and if so, change status
             if checkout.c_type == "cc":
                 if len(checkout.processing) == checkout.c_quant:
                     checkout.c_status = 1

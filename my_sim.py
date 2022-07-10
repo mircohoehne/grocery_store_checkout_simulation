@@ -30,7 +30,6 @@ bei genereller Implementierung (normal und exponentialverteilung) davon ausgehen
 wie Kunden beim scannen sind.
 """
 
-
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
 # TODO: Visualisierungen erstellen
 
@@ -58,7 +57,8 @@ class Customer:
     """class to keep track of customers"""
 
     # initialize Variables for Object
-    t_arr: float
+
+    t_arr: float = None
     """ arrival time of the customer """
     cust_id: int = field(default_factory=count(start=1).__next__, init=False)
     """ generate an unique id for every customer """

@@ -14,14 +14,10 @@ warnings.filterwarnings("ignore", module="tqdm")
 
 # TODO: Verteilungen für Service Time abstrahieren
 """
-Funktionen als Parameter einbauen und dann normal und exponentialverteilung zusätzlich zu denen aus POS Daten einbauen
+Funktionen als Parameter einbauen und dann normal (?) und exponentialverteilung 
+zusätzlich zu denen aus POS Daten einbauen
 """
-
-# TODO: unterschiedliche Service Time für SC vs CC (SC halb so schnell?) -> für generelle Verteilungen evt. wichtig
-"""
-bei genereller Implementierung (normal und exponentialverteilung) davon ausgehen, dass Kassierer doppelt so schnell 
-wie Kunden beim scannen sind.
-"""
+# TODO: Codefragmente die Duplikate sind zusammenführen
 
 # TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
 """
@@ -58,6 +54,7 @@ class Event:
 @dataclass(slots=True)
 class Customer:
     """class to keep track of customers"""
+
     # initialize Variables for Object
     t_arr: float = None
     """ arrival time of the customer """
@@ -98,14 +95,20 @@ class Checkout:
 
 
 class Simulation:
-    """ Class for simulation of a supermarket"""
+    """Class for simulation of a supermarket"""
+
     def __init__(
             self,
             s_seed: int = 42,
             t_max: float = 1000,
             # TODO: Hier unterschiedliche processing Verteilungen einfügen?
-            proc_rate_cc: float = 2.5,
-            proc_rate_sc: float = 0.75,
+            distribution: str = "POS",
+            proc_exp_cc: float = 2.5,
+            proc_exp_sc: float = 0.75,
+            proc_pos_cc_loc: float = 3.7777777777777777,
+            proc_pos_cc_scale: float = 2.1742325579116906,
+            proc_pos_sc_loc: float = 11.224246069610276,
+            proc_pos_sc_scale: float = 6.208811868891992,
             arrival_rate: float = 1.0,
             num_cc: int = 6,
             num_sc: int = 1,
@@ -113,8 +116,14 @@ class Simulation:
             sc_quant: int = 6,
             item_scale: float = 14.528563291255535,  # Scale parameter for exponential distribution
     ):
-        """ initialize parameters """
-        self.processing_rate = {"cc": proc_rate_cc, "sc": proc_rate_sc}
+        """initialize parameters"""
+        self.processing_parameters_exp = {"cc": proc_exp_cc, "sc": proc_exp_sc}
+        self.processing_parameters_pos = {
+            "cc_loc": proc_pos_cc_loc,
+            "cc_scale": proc_pos_cc_scale,
+            "sc_loc": proc_pos_sc_loc,
+            "sc_scale": proc_pos_sc_scale,
+        }
         self.arrival_rate = arrival_rate
         self.num_cc = num_cc
         self.num_sc = num_sc
@@ -132,6 +141,7 @@ class Simulation:
         self.c_quant = c_quant
         self.sc_quant = sc_quant
         self.item_scale = item_scale
+        self.distribution_choice = distribution
 
         for i in range(self.num_cc):
             num = i + 1
@@ -146,7 +156,7 @@ class Simulation:
 
     def get_arrival(self):
 
-        """ If queuing mode is shortest:
+        """If queuing mode is shortest:
         sample arrival time, choose the shortest queue, generate a new_customer and add the new arrival event to the
         event list of the class object
         """
@@ -172,7 +182,7 @@ class Simulation:
 
     # use ql for checking
     def update_ql(self):
-        """ update the list of queue lengths and write it to the queue log"""
+        """update the list of queue lengths and write it to the queue log"""
         new_ql = []
         for i in range(self.sum_c):
             new_ql.append(len(self.checkouts[f"Checkout{i + 1}"].queue))
@@ -213,13 +223,32 @@ class Simulation:
             # pop customer from checkout queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
             # generate processing time per item
-            # TODO: Parameter nicht hardcoden, sondern übergeben
-            if checkout.c_type == 'cc':
-                proc_rate_per_item = self.rng.laplace(loc=3.7777777777777777, scale=2.1742325579116906)
-            elif checkout.c_type == 'sc':
-                proc_rate_per_item = self.rng.gumbel(loc=11.224246069610276, scale=6.208811868891992)
+            if self.distribution_choice == "POS":
+                if checkout.c_type == "cc":
+                    proc_rate_per_item = self.rng.laplace(
+                        loc=self.processing_parameters_pos["cc_loc"],
+                        scale=self.processing_parameters_pos["cc_scale"],
+                    )
+                elif checkout.c_type == "sc":
+                    proc_rate_per_item = self.rng.gumbel(
+                        loc=self.processing_parameters_pos["sc_loc"],
+                        scale=self.processing_parameters_pos["sc_scale"],
+                    )
+                else:
+                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
+            elif self.distribution_choice == "exp":
+                if checkout.c_type == "cc":
+                    proc_rate_per_item = self.rng.exponential(
+                        self.processing_parameters_exp["cc"]
+                    )
+                elif checkout.c_type == "sc":
+                    proc_rate_per_item = self.rng.exponential(
+                        self.processing_parameters_exp["sc"]
+                    )
+                else:
+                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
             else:
-                raise ValueError('Checkout Type is neither "cc" nor "sc"')
+                raise NotImplementedError
             # calculate processing time for all items
             proc_rate = proc_rate_per_item * proc_customer.num_items
             # calculate new time
@@ -278,12 +307,34 @@ class Simulation:
         if len(checkout.queue) > 0:
             # generate random processing time
             # legacy code: proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
-            if checkout.c_type == 'cc':
-                proc_rate_per_item = self.rng.laplace(loc=3.7777777777777777, scale=2.1742325579116906)
-            elif checkout.c_type == 'sc':
-                proc_rate_per_item = self.rng.gumbel(loc=11.224246069610276, scale=6.208811868891992)
+            if self.distribution_choice == "POS":
+                if checkout.c_type == "cc":
+                    proc_rate_per_item = self.rng.laplace(
+                        loc=self.processing_parameters_pos["cc_loc"],
+                        scale=self.processing_parameters_pos["cc_scale"],
+                    )
+                elif checkout.c_type == "sc":
+                    proc_rate_per_item = self.rng.gumbel(
+                        loc=self.processing_parameters_pos["cc_loc"],
+                        scale=self.processing_parameters_pos["cc_scale"],
+                    )
+                else:
+                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
+
+            elif self.distribution_choice == "exp":
+                if checkout.c_type == "cc":
+                    proc_rate_per_item = self.rng.exponential(
+                        self.processing_parameters_exp["cc"]
+                    )
+                elif checkout.c_type == "sc":
+                    proc_rate_per_item = self.rng.exponential(
+                        self.processing_parameters_exp["sc"]
+                    )
+                else:
+                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
+
             else:
-                raise ValueError('Checkout Type is neither "cc" nor "sc"')
+                raise NotImplementedError
             # get customer from checkout queue
             dep_customer = checkout.queue[0][2]
             # calculate total proc_rate for all items
@@ -326,13 +377,6 @@ class Simulation:
         elif self.event_list[0][2].kind == "dep":
             self.departure()
 
-    # TODO: Methode einfügen, die Simulation durchführt und als Eingabe Zahl bekommt,
-    #  wie oft Simulation durchgeführt werden soll -> erst später als Feature!
-    # Als statische Methode implementieren, die Dict mit einzelnen Parametern
-    # für die Simulationen bekommen soll? Also nicht nur festlegen wie oft, sondern auch
-    # unterschiedliche Parameter möglich?
-    # Dictionary: Keys -> Name der Simulation, Values -> Liste der Keyword argumente
-    # mit parametern
     def simulate(self):
         """
         :return: Event-, Customer- und queue Log als Liste
@@ -348,12 +392,16 @@ class Simulation:
                 t_delta = float(self.t) - t_old
                 pbar.update(t_delta)
 
-        # TODO: hier data wrangling einfügen, damit logs direkt für Datenanalyse genutzt werden können
         event_df = pd.DataFrame(self.event_log)
         event_df.columns = ["event_id", "time", "kind", "customer_id", "checkout_id"]
 
         customer_df = pd.DataFrame(self.customer_log)
-        customer_df.columns = ["customer_id", "arrival_time", "departure_time", "processing_rate"]
+        customer_df.columns = [
+            "customer_id",
+            "arrival_time",
+            "departure_time",
+            "processing_rate",
+        ]
 
         queue_df = pd.DataFrame(self.queue_log)
         queue_df.columns = [
@@ -371,6 +419,7 @@ def main():
     my_sim = Simulation(
         num_cc=16,
         num_sc=6,
+        distribution='exp',
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 

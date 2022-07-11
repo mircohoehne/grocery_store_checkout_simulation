@@ -69,7 +69,7 @@ class Checkout:
     c_id: int
     """ id of the checkout """
     c_type: str
-    """ type of the checkout """
+    """ type of the checkout {'sc': self-checkout, 'cc': cashier checkout}"""
     c_status: int = 0
     """ status of the cashier/self-checkout {0: free, 1: Busy}"""
     c_quant: int = 1
@@ -90,6 +90,8 @@ class Checkout:
 class Simulation:
     """Class for simulation of a supermarket"""
 
+    # TODO: __repr__ Methode schreiben
+    # TODO: Variablen mit DocStrings versehen!
     def __init__(
             self,
             s_seed: int = 42,
@@ -409,10 +411,18 @@ class Simulation:
 
 
 def main():
+    """
+    Experiment 1:
+
+
+    Experiment 2:
+
+    Experiment 3:
+    """
     my_sim = Simulation(
         num_cc=16,
         num_sc=6,
-        distribution='exp',
+
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 

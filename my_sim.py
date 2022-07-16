@@ -59,6 +59,10 @@ class Customer:
     """ initialize processing time """
     num_items: int = None
     """ number of items the customer wants to buy"""
+    proc_rate_per_item: int = None
+    """ processing rate per item """
+    c_id: int = None
+    """id of the checkout the customer queues at"""
 
 
 @dataclass(slots=True)
@@ -169,6 +173,8 @@ class Simulation:
         num_items = np.ceil(self.rng.exponential(scale=self.item_scale))
         # create new customer
         new_customer = Customer(t_arrival, num_items=num_items)
+        # set checkout id
+        new_customer.c_id = c_id
         # create new event
         new_arr = Event(t_arrival, "arr", new_customer, c_id)
         # push event into heapq, use ev_id for sorting if events occur at same time
@@ -217,36 +223,39 @@ class Simulation:
         if checkout.c_status == 0:
             # pop customer from checkout queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
-            # generate processing time per item
-            if self.distribution_choice == "POS":
-                if checkout.c_type == "cc":
-                    proc_rate_per_item = self.rng.laplace(
-                        loc=self.processing_parameters_pos["cc_loc"],
-                        scale=self.processing_parameters_pos["cc_scale"],
-                    )
-                elif checkout.c_type == "sc":
-                    proc_rate_per_item = self.rng.gumbel(
-                        loc=self.processing_parameters_pos["sc_loc"],
-                        scale=self.processing_parameters_pos["sc_scale"],
-                    )
+            # generate processing time per item while the processing rate per item is none or <= 0
+            while proc_customer.proc_rate_per_item == None or proc_customer.proc_rate_per_item <= 0:
+                if self.distribution_choice == "POS":
+                    if checkout.c_type == "cc":
+                        proc_customer.proc_rate_per_item = self.rng.laplace(
+                            loc=self.processing_parameters_pos["cc_loc"],
+                            scale=self.processing_parameters_pos["cc_scale"],
+                        )
+                    elif checkout.c_type == "sc":
+                        proc_customer.proc_rate_per_item = self.rng.gumbel(
+                            loc=self.processing_parameters_pos["sc_loc"],
+                            scale=self.processing_parameters_pos["sc_scale"],
+                        )
+                    else:
+                        raise ValueError('Checkout Type is neither "cc" nor "sc"')
+                elif self.distribution_choice == "exp":
+                    if checkout.c_type == "cc":
+                        proc_customer.proc_rate_per_item = self.rng.exponential(
+                            self.processing_parameters_exp["cc"]
+                        )
+                    elif checkout.c_type == "sc":
+                        proc_customer.proc_rate_per_item = self.rng.exponential(
+                            self.processing_parameters_exp["sc"]
+                        )
+                    else:
+                        raise ValueError('Checkout Type is neither "cc" nor "sc"')
                 else:
-                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
-            elif self.distribution_choice == "exp":
-                if checkout.c_type == "cc":
-                    proc_rate_per_item = self.rng.exponential(
-                        self.processing_parameters_exp["cc"]
-                    )
-                elif checkout.c_type == "sc":
-                    proc_rate_per_item = self.rng.exponential(
-                        self.processing_parameters_exp["sc"]
-                    )
-                else:
-                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
-            else:
-                raise NotImplementedError
+                    raise NotImplementedError
             # calculate processing time for all items
-            proc_rate = proc_rate_per_item * proc_customer.num_items
-            # calculate new time
+            proc_rate = proc_customer.proc_rate_per_item * proc_customer.num_items
+            # set proc rate for customer
+            proc_customer.t_proc = proc_rate
+            # calculate departure time
             t_1 = self.t + proc_rate
             # create new event
             # TODO: current_event.customer durch proc_customer ersetzen? nochmal abchecken
@@ -254,8 +263,7 @@ class Simulation:
             # add new departure event
             heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))
             # add departure and processing time for customer
-            current_event.customer.t_dep = t_1
-            current_event.customer.t_proc = proc_rate
+            proc_customer.t_dep = t_1
             # put customer in processing queue
             heapq.heappush(
                 checkout.processing,
@@ -300,40 +308,43 @@ class Simulation:
         heapq.heappop(checkout.processing)
 
         if len(checkout.queue) > 0:
-            # generate random processing time
-            # legacy code: proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
-            if self.distribution_choice == "POS":
-                if checkout.c_type == "cc":
-                    proc_rate_per_item = self.rng.laplace(
-                        loc=self.processing_parameters_pos["cc_loc"],
-                        scale=self.processing_parameters_pos["cc_scale"],
-                    )
-                elif checkout.c_type == "sc":
-                    proc_rate_per_item = self.rng.gumbel(
-                        loc=self.processing_parameters_pos["cc_loc"],
-                        scale=self.processing_parameters_pos["cc_scale"],
-                    )
-                else:
-                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
-
-            elif self.distribution_choice == "exp":
-                if checkout.c_type == "cc":
-                    proc_rate_per_item = self.rng.exponential(
-                        self.processing_parameters_exp["cc"]
-                    )
-                elif checkout.c_type == "sc":
-                    proc_rate_per_item = self.rng.exponential(
-                        self.processing_parameters_exp["sc"]
-                    )
-                else:
-                    raise ValueError('Checkout Type is neither "cc" nor "sc"')
-
-            else:
-                raise NotImplementedError
             # get customer from checkout queue
             dep_customer = checkout.queue[0][2]
+            # generate random processing time
+            # legacy code: proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
+            while dep_customer.proc_rate_per_item == None or dep_customer.proc_rate_per_item <= 0:
+                if self.distribution_choice == "POS":
+                    if checkout.c_type == "cc":
+                        dep_customer.proc_rate_per_item = self.rng.laplace(
+                            loc=self.processing_parameters_pos["cc_loc"],
+                            scale=self.processing_parameters_pos["cc_scale"],
+                        )
+                    elif checkout.c_type == "sc":
+                        dep_customer.proc_rate_per_item = self.rng.gumbel(
+                            loc=self.processing_parameters_pos["sc_loc"],
+                            scale=self.processing_parameters_pos["sc_scale"],
+                        )
+                    else:
+                        raise ValueError('Checkout Type is neither "cc" nor "sc"')
+
+                elif self.distribution_choice == "exp":
+                    if checkout.c_type == "cc":
+                        dep_customer.proc_rate_per_item = self.rng.exponential(
+                            self.processing_parameters_exp["cc"]
+                        )
+                    elif checkout.c_type == "sc":
+                        dep_customer.proc_rate_per_item = self.rng.exponential(
+                            self.processing_parameters_exp["sc"]
+                        )
+                    else:
+                        raise ValueError('Checkout Type is neither "cc" nor "sc"')
+
+                else:
+                    raise NotImplementedError
             # calculate total proc_rate for all items
-            proc_rate = dep_customer.num_items * proc_rate_per_item
+            proc_rate = dep_customer.num_items * dep_customer.proc_rate_per_item
+            # save proc_rate for departing customer
+            dep_customer.t_proc = proc_rate
             # calculate departure time
             t_dep = self.t + proc_rate
             # set departure and processing time for log
@@ -357,12 +368,17 @@ class Simulation:
                     checkout.c_status = 1
 
         # log customer
+        waiting_time = current_event.customer.t_dep - current_event.customer.t_arr - current_event.customer.t_proc,
+        total_time = current_event.customer.t_dep - current_event.customer.t_arr
         self.customer_log.append(
             [
                 current_event.customer.cust_id,
                 current_event.customer.t_arr,
                 current_event.customer.t_dep,
                 current_event.customer.t_proc,
+                waiting_time,
+                total_time,
+                current_event.customer.c_id
             ]
         )
 
@@ -396,6 +412,9 @@ class Simulation:
             "arrival_time",
             "departure_time",
             "processing_rate",
+            "waiting time before being processed",
+            "time from queuing to checkout",
+            "checkout id"
         ]
 
         queue_df = pd.DataFrame(self.queue_log)
@@ -422,7 +441,6 @@ def main():
     my_sim = Simulation(
         num_cc=16,
         num_sc=6,
-
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 

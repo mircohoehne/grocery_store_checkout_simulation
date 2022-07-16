@@ -108,7 +108,7 @@ class Simulation:
             proc_pos_cc_scale: float = 2.1742325579116906,
             proc_pos_sc_loc: float = 11.224246069610276,
             proc_pos_sc_scale: float = 6.208811868891992,
-            arrival_rate: float = 1.0,
+            arrival_rate: float = 3.0,
             num_cc: int = 6,
             num_sc: int = 1,
             c_quant: int = 1,
@@ -432,15 +432,13 @@ class Simulation:
 def main():
     """
     Experiment 1:
-
-
-    Experiment 2:
-
-    Experiment 3:
+    Daten aus POS. Anzahl Kassen daraus abgeleitet.
+    Arrival Rate von
     """
     my_sim = Simulation(
         num_cc=16,
-        num_sc=6,
+        num_sc=1,  # six self checkouts with one queue
+        t_max=10000
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
@@ -448,6 +446,33 @@ def main():
     customer_log.to_csv("customer_log1.csv", index=False)
     queue_log.to_csv("queue_log1.csv", index=False)
 
+    """
+    Experiment 2:
+    """
+    my_sim = Simulation(
+        num_cc=22,
+        num_sc=1,  # six self checkouts with one queue
+        t_max=10000
+    )
+    event_log, customer_log, queue_log = my_sim.simulate()
+
+    event_log.to_csv("event_log2.csv", index=False)
+    customer_log.to_csv("customer_log2.csv", index=False)
+    queue_log.to_csv("queue_log2.csv", index=False)
+
+    """
+    Experiment 3:
+    """
+    my_sim = Simulation(
+        num_cc=16,
+        num_sc=2,  # six self checkouts with one queue
+        t_max=10000
+    )
+    event_log, customer_log, queue_log = my_sim.simulate()
+
+    event_log.to_csv("event_log3.csv", index=False)
+    customer_log.to_csv("customer_log3.csv", index=False)
+    queue_log.to_csv("queue_log3.csv", index=False)
 
 # signalize to reader of code that this is a script and not just a library
 if __name__ == "__main__":

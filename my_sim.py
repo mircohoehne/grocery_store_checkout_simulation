@@ -12,20 +12,6 @@ from tqdm import tqdm
 # ignore Warning, that the progress bar might go slightly over 100% due to rounding errors
 warnings.filterwarnings("ignore", module="tqdm")
 
-# TODO: Experiment Design festlegen (einfach unterschiedliche Parameter nutzen und dann Plots machen und vergleichen)
-"""
-Experiment Design: 
-- POS Daten nutzen -> fertig
-- Verteilungen herausfinden -> fertig
-- Systemerweiterungen analysieren (Cashier Checkouts hinzufügen, Self Checkouts hinzufügen)
-Das muss genug sein! Exponentialverteilung werden eingebaut, aber werde ich nicht nutzen
-"""
-# TODO: Visualisierungen erstellen
-"""
-hier dann einfach Notebook einfügen und auch mit Visualisierungen zu unterschiedlichen Systemen schmücken
-"""
-
-
 @dataclass(slots=True, frozen=True)
 class Event:
     """class for keeping track of events"""
@@ -99,21 +85,35 @@ class Simulation:
     def __init__(
             self,
             s_seed: int = 42,
+            # seed for random number generation
             t_max: float = 1000,
-            # TODO: Hier unterschiedliche processing Verteilungen einfügen?
+            # duration of the simulation in s
             distribution: str = "POS",
+            # chosen distribution (POS -> Distributions extracted from Paper, exp -> Exponential distribution)
             proc_exp_cc: float = 2.5,
+            # Parameter for exponential distribution on cashier checkouts
             proc_exp_sc: float = 0.75,
+            # Parameter for exponential distribution on self-checkouts
             proc_pos_cc_loc: float = 3.7777777777777777,
+            # location parameter for transaction time on cashier checkouts
             proc_pos_cc_scale: float = 2.1742325579116906,
+            # scale parameter for transaction time on cashier checkouts
             proc_pos_sc_loc: float = 11.224246069610276,
+            # location parameter for transaction time on self-checkouts
             proc_pos_sc_scale: float = 6.208811868891992,
+            # scale parameter for transaction time on self-checkouts
             arrival_rate: float = 3.5,
+            # scale rate parameter for the exponential distribution
             num_cc: int = 6,
+            # number of cashier checkouts
             num_sc: int = 1,
+            # number of self-checkouts
             c_quant: int = 1,
+            # quantity of customers that can be handled at once at cashier checkout
             sc_quant: int = 6,
-            item_scale: float = 14.528563291255535,  # Scale parameter for exponential distribution
+            # quantity of customers that can be handled at once at self-checkout
+            item_scale: float = 14.528563291255535,
+            # Scale parameter for the generation of the number of items a customer buys
     ):
         """initialize parameters"""
         self.processing_parameters_exp = {"cc": proc_exp_cc, "sc": proc_exp_sc}
@@ -259,7 +259,7 @@ class Simulation:
             t_1 = self.t + proc_rate
             # create new event
             # TODO: current_event.customer durch proc_customer ersetzen? nochmal abchecken
-            new_dep = Event(t_1, "dep", current_event.customer, current_event.c_id)
+            new_dep = Event(t_1, "dep", proc_customer, proc_customer.c_id)
             # add new departure event
             heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))
             # add departure and processing time for customer
@@ -470,6 +470,7 @@ def main():
     event_log.to_csv("event_log3.csv", index=False)
     customer_log.to_csv("customer_log3.csv", index=False)
     queue_log.to_csv("queue_log3.csv", index=False)
+
 
 # signalize to reader of code that this is a script and not just a library
 if __name__ == "__main__":

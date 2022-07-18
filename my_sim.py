@@ -429,8 +429,6 @@ class Simulation:
 def main():
     """
     Experiment 1:
-    Daten aus POS. Anzahl Kassen daraus abgeleitet.
-    Arrival Rate von
     """
     my_sim = Simulation(
         num_cc=16,

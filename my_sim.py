@@ -155,9 +155,9 @@ class Simulation:
 
     def get_arrival(self):
 
-        """If queuing mode is shortest:
-        sample arrival time, choose the shortest queue, generate a new_customer and add the new arrival event to the
-        event list of the class object
+        """
+        sample arrival time, choose the shortest queue, generate a new_customer, amount of items the customer has in cart
+        and add the new arrival event to the event list of the class object
         """
         # calculate the min value in list
         min_value = min(self.ql_list)
@@ -258,7 +258,6 @@ class Simulation:
             # calculate departure time
             t_1 = self.t + proc_rate
             # create new event
-            # TODO: current_event.customer durch proc_customer ersetzen? nochmal abchecken
             new_dep = Event(t_1, "dep", proc_customer, proc_customer.c_id)
             # add new departure event
             heapq.heappush(self.event_list, (t_1, new_dep.ev_id, new_dep))

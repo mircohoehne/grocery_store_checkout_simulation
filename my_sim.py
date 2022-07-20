@@ -81,8 +81,6 @@ class Checkout:
 class Simulation:
     """Class for simulation of a supermarket"""
 
-    # TODO: __repr__ Methode schreiben
-    # TODO: Variablen mit DocStrings versehen!
     def __init__(
             self,
             s_seed: int = 42,

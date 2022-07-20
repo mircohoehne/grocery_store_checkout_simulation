@@ -12,6 +12,7 @@ from tqdm import tqdm
 # ignore Warning, that the progress bar might go slightly over 100% due to rounding errors
 warnings.filterwarnings("ignore", module="tqdm")
 
+
 @dataclass(slots=True, frozen=True)
 class Event:
     """class for keeping track of events"""
@@ -194,7 +195,7 @@ class Simulation:
         """
         pops the arrival event from the event list (first entry, since min-heap is used), and writes it to event log.
         A customer is added to the respective checkout queue and the update_ql() method is called.
-        If the queue is empty the customer is processed ################ Zu ende schreiben  #############
+        If the queue is empty the customer is processed directly.
         """
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -224,7 +225,10 @@ class Simulation:
             # pop customer from checkout queue
             _, _, proc_customer = heapq.heappop(checkout.queue)
             # generate processing time per item while the processing rate per item is none or <= 0
-            while proc_customer.proc_rate_per_item == None or proc_customer.proc_rate_per_item <= 0:
+            while (
+                    proc_customer.proc_rate_per_item == None
+                    or proc_customer.proc_rate_per_item <= 0
+            ):
                 if self.distribution_choice == "POS":
                     if checkout.c_type == "cc":
                         proc_customer.proc_rate_per_item = self.rng.laplace(
@@ -311,7 +315,10 @@ class Simulation:
             dep_customer = checkout.queue[0][2]
             # generate random processing time
             # legacy code: proc_rate = self.rng.exponential(self.processing_rate[checkout.c_type])
-            while dep_customer.proc_rate_per_item == None or dep_customer.proc_rate_per_item <= 0:
+            while (
+                    dep_customer.proc_rate_per_item == None
+                    or dep_customer.proc_rate_per_item <= 0
+            ):
                 if self.distribution_choice == "POS":
                     if checkout.c_type == "cc":
                         dep_customer.proc_rate_per_item = self.rng.laplace(
@@ -375,7 +382,7 @@ class Simulation:
                 current_event.customer.t_dep,
                 current_event.customer.t_proc,
                 total_time,
-                current_event.customer.c_id
+                current_event.customer.c_id,
             ]
         )
 
@@ -410,7 +417,7 @@ class Simulation:
             "departure_time",
             "processing_rate",
             "time from queuing to checkout",
-            "checkout id"
+            "checkout id",
         ]
 
         queue_df = pd.DataFrame(self.queue_log)
@@ -430,9 +437,7 @@ def main():
     Experiment 1:
     """
     my_sim = Simulation(
-        num_cc=16,
-        num_sc=1,  # six self checkouts with one queue
-        t_max=10000
+        num_cc=16, num_sc=1, t_max=10000  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
@@ -444,9 +449,7 @@ def main():
     Experiment 2:
     """
     my_sim = Simulation(
-        num_cc=22,
-        num_sc=1,  # six self checkouts with one queue
-        t_max=10000
+        num_cc=22, num_sc=1, t_max=10000  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
@@ -458,9 +461,7 @@ def main():
     Experiment 3:
     """
     my_sim = Simulation(
-        num_cc=16,
-        num_sc=2,  # six self checkouts with one queue
-        t_max=10000
+        num_cc=16, num_sc=2, t_max=10000  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 

@@ -17,7 +17,7 @@ The Grocery Store Checkout Simulation is an event-based representation of checko
 graph TD
     A[Start Simulation] --> B[Initialize Simulation Parameters]
     B --> C[Generate Initial Customer Arrival Time]
-    C --> |Periodically create new arrivals with exponential distribution| C
+    C --> |Periodically draw new arrivals| C
     C --> D[Customer Arrival]
     D --> E[Add Customer to Queue]
     E --> F{Cashier Available?}

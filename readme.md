@@ -9,7 +9,7 @@ The Grocery Store Checkout Simulation is an event-based representation of checko
 2. **Queue Management**: Efficiently manages a queue of waiting customers, ensuring they are processed as soon as a cashier becomes available.
 3. **Event-Driven Logic**: Uses events to depict customer arrivals and departures, which are the backbone of the simulation.
 4. **Data-Driven Design**: Incorporates real POS data to model behaviors and timings.
-5. **Comprehensive Logging**: Maintains logs of events, providing insights into the system's performance and customer wait times.
+5. **Comprehensive Logging**: Maintains logs of events, providing insights into the system's performance and customer wait times and queue lengths.
 
 ## Simulation Flow:
 

@@ -1,7 +1,9 @@
 # Grocery Store Checkout Simulation
 
 ## Overview
-The Grocery Store Checkout Simulation is an event-based representation of checkouts at a grocery store, encompassing both cashier-operated and self-checkout counters. By leveraging real Point-Of-Sale (POS) data[^1], this simulation captures a genuine portrayal of the grocery store checkout experience. With the added benefit of the `fitter` library, the project identifies the best-fit statistical distribution for various events, ensuring heightened realism.
+The Grocery Store Checkout Simulation is an event-based representation of checkouts at a grocery store, encompassing both cashier-operated and self-checkout counters. By leveraging real Point-Of-Sale (POS) data[^1], this simulation captures a genuine portrayal of the grocery store checkout experience. With the added benefit of the `fitter` library, the project identifies the best-fit statistical distribution for various events, ensuring heightened realism. 
+
+A detailed Paper explaining the Project in German can be found in [Paper_German.pdf](Paper_German.pdf).
 
 ## Key Features:
 

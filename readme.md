@@ -14,23 +14,26 @@ A detailed paper explaining the project in German can be accessed at [Paper_Germ
 5. **Comprehensive Logging**: Keeps a log of events, offering insights into system performance, customer wait times, and queue lengths.
 
 ## Simulation Flow:
-
 ```mermaid
 graph TD
-    A[Start Simulation] --> B[Initialize Simulation Parameters]
-    B --> C[Generate Initial Customer Arrival Time]
-    C --> |Periodically generate new arrivals| C
-    C --> D[Customer Arrival]
-    D --> E[Add Customer to Queue]
-    E --> F{Is Cashier Available?}
-    F -->|Yes| G[Process Customer from Queue]
-    F -->|No| H[Customer Waits in Queue]
-    G --> I[Create Event: Arrival or Departure]
-    I --> J[Update Simulation]
-    J --> K[Execute Event]
-    K --> M[Customer Departure & Log Entry]
-```
 
+    A[Initialize Simulation] --> B[Generate Arrival]
+    B --> C[Process next Event]
+    C --> N{Arrival Event?}
+    N --> |Yes| D{Checkout Idle?}
+    N --> |No| F[Handle Departure]
+    D --> |Yes| E[Schedule Departure Event]
+    D --> |No| Z[Add Customer to Queue]
+    Z --> H{Time Limit Reached?}
+    E --> H
+    F --> J{Checkout Queue Empty?}
+    J --> |Yes| H
+    J --> |No| L[Handle Next Customer in Queue]
+    L --> H
+    H --> |No| B
+    H --> |Yes| I[End Simulation]
+
+```
 ## How to Use:
 
 - Install the required Python libraries: `numpy`, `pandas`, `tqdm`, and `fitter`. 

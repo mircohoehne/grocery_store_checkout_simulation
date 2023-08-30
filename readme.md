@@ -12,7 +12,7 @@ A detailed paper explaining the project in German can be accessed at [Paper_Germ
 3. **Customizable parameters**: the user can specify parameters such as the number of checkouts, arrival rates, processing rates, and others (see [Customizable Parameters](#customizable-parameters)).
 4. **Logging**: the simulation logs various details, including individual events, customer details, and the queue lengths at different checkouts.
 
-## Simulation flow:
+## Simulation Flow:
 ```mermaid
 graph TD
     a[Start] --> b[Generate arrival]
@@ -31,7 +31,7 @@ graph TD
     h --> |No| b
     h --> |Yes| i[End]
 ```
-## How to use:
+## How To Use:
 
 1. **Initialization**: <br> create a simulation object by providing necessary parameters such as number of cashier checkouts, self-checkouts, time constraint, etc. (see [Customizable Parameters](#customizable-parameters) for more details). 
 ```python
@@ -71,13 +71,13 @@ Three experiments are provided in the `main` method of [my_sim.py](my_sim.py):
 
 The logs for these experiments can be found in the [Logs](Logs) folder.
 
-## potential use cases:
+## Potential Use Cases:
 
 - **Resource allocation**: Understand customer flow and wait times to optimize the number of active checkouts.
 - **Enhancing customer experience**: Glean insights from the simulation to develop strategies aimed at reducing wait times and elevating the overall checkout experience.
 - **Scenario analysis**: The simulation's versatility supports modeling of diverse scenarios, such as peak shopping hours, special sales events, or times with limited staff.
 
-## conclusion:
+## Conclusion:
 this simulation provides insights into how different numbers and types of checkouts affect the customer experience in a supermarket. by analyzing the logs, one can make informed decisions about optimizing the number and type of checkouts to minimize customer waiting times and improve efficiency.
 
 [^1]: data Source: [Point of Sale (POS) Data from a Supermarket: Transactions and Cashier Operations](https://www.mdpi.com/2306-5729/4/2/67)

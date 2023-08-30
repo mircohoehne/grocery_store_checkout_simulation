@@ -9,8 +9,16 @@ A detailed paper explaining the project in German can be accessed at [Paper_Germ
 1. **Event-driven simulation**: The simulation progresses by processing events, such as customer arrivals and departures.
 2. **Data-driven design**: The simulation uses real POS data[^1] to model behaviors and timings.
 3. **Multiple checkouts**: The supermarket can feature a mix of cashier checkouts and self-checkouts.
-3. **Customizable parameters**: Users can specify parameters such as the number of checkouts, arrival rates, processing rates, and others (see [Customizable Parameters](#customizable-parameters)).
-4. **Logging**: The simulation logs various details, including individual events, customer details, and the queue lengths at different checkouts.
+4. **Customizable parameters**: Users can specify parameters such as the number of checkouts, arrival rates, processing rates, and others (see [Customizable Parameters](#customizable-parameters)).
+5. **Logging**: The simulation logs various details, including individual events, customer details, and the queue lengths at different checkouts.
+
+## Project Structure
+
+The project consists of four main classes:
+1. **Event** - Represents an event in the simulation. Events can be either the arrival of a customer or the departure of a customer after checking out.
+2. **Customer** - Represents a customer in the supermarket. Contains details such as arrival time, number of items, processing rate per item and the checkout where the customer is queued.
+3. **Checkout** - Represents a checkout counter. Can be either a cashier checkout or a self-checkout. Contains details about the queue of customers waiting, the processing of customers and the status of the checkout.
+4. **Simulation** - The main simulation class. Contains methods to generate customer arrivals, handle their processing, update the state of the system and log various events
 
 ## Simulation Flow
 ```mermaid

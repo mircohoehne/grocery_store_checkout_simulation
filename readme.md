@@ -49,6 +49,7 @@ queue_log.to_csv('queue_log.csv')
 ```
 
 Alternatively you can use the `checkout`, `customer`, and `queue` classes to build your own simulation.
+Dependencies can be found in the [requirements.txt](requirements.txt) file.
 
 ## Customizable Parameters:
 When initializing the simulation using the Simulation class, you can set various parameters to influence the behavior and outcome of the simulation. Here's a list of these parameters with brief descriptions:

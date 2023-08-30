@@ -17,21 +17,21 @@ A detailed paper explaining the project in German can be accessed at [Paper_Germ
 ```mermaid
 graph TD
 
-    A[Initialize Simulation] --> B[Generate Arrival]
+    A[Start] --> B[Generate Arrival]
     B --> C[Process next Event]
-    C --> N{Arrival Event?}
-    N --> |Yes| D{Checkout Idle?}
+    C --> N{Arrival <br>Event?}
+    N --> |Yes| D{Checkout <br> Idle?}
     N --> |No| F[Handle Departure]
     D --> |Yes| E[Schedule Departure Event]
     D --> |No| Z[Add Customer to Queue]
-    Z --> H{Time Limit Reached?}
+    Z --> H{Time Limit <br> Reached?}
     E --> H
-    F --> J{Checkout Queue Empty?}
+    F --> J{Checkout <br> Queue Empty?}
     J --> |Yes| H
     J --> |No| L[Handle Next Customer in Queue]
     L --> H
     H --> |No| B
-    H --> |Yes| I[End Simulation]
+    H --> |Yes| I[End]
 
 ```
 ## How to Use:

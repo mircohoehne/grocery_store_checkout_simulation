@@ -64,12 +64,12 @@ When initializing the simulation using the Simulation class, you can set various
 9. `item_scale`: Scale parameter for generating the number of items a customer buys.
 
 ## Experiments
-Three experiments are provided in the `main` method of [simulation.py](simulation.py):
+Three experiments are provided in the `main` method of [my_sim.py](my_sim.py):
 1. 16 cashier checkouts, 1 self-checkout, 10000 seconds time constraint.
 2. 22 cashier checkouts, 1 self-checkout, 10000 seconds time constraint.
 3. 16 cashier checkouts, 2 self-checkouts, 10000 seconds time constraint.
 
-The logs for these experiments can be found in the [logs](logs) folder.
+The logs for these experiments can be found in the [Logs](Logs) folder.
 
 ## potential use cases:
 

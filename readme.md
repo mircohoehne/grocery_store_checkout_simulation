@@ -31,6 +31,7 @@ graph TD
     h --> |No| b
     h --> |Yes| i[End]
 ```
+The simulation is implemented in a way, that the customer always chooses the shortest queue. If there are multiple queues with the same length, the customer chooses randomly one of the shortest queues.
 ## How To Use:
 
 1. **Initialization**: <br> create a simulation object by providing necessary parameters such as number of cashier checkouts, self-checkouts, time constraint, etc. (see [Customizable Parameters](#customizable-parameters) for more details). 

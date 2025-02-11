@@ -486,9 +486,9 @@ if __name__ == "__main__":
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
-    event_log.to_csv("event_log1.csv", index=False)
-    customer_log.to_csv("customer_log1.csv", index=False)
-    queue_log.to_csv("queue_log1.csv", index=False)
+    event_log.to_csv("Logs/event_log1.csv", index=False)
+    customer_log.to_csv("Logs/customer_log1.csv", index=False)
+    queue_log.to_csv("Logs/queue_log1.csv", index=False)
 
     """
     Experiment 2:
@@ -500,9 +500,9 @@ if __name__ == "__main__":
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
-    event_log.to_csv("event_log2.csv", index=False)
-    customer_log.to_csv("customer_log2.csv", index=False)
-    queue_log.to_csv("queue_log2.csv", index=False)
+    event_log.to_csv("Logs/event_log2.csv", index=False)
+    customer_log.to_csv("Logs/customer_log2.csv", index=False)
+    queue_log.to_csv("Logs/queue_log2.csv", index=False)
 
     """
     Experiment 3:
@@ -514,6 +514,6 @@ if __name__ == "__main__":
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
-    event_log.to_csv("event_log3.csv", index=False)
-    customer_log.to_csv("customer_log3.csv", index=False)
-    queue_log.to_csv("queue_log3.csv", index=False)
+    event_log.to_csv("Logs/event_log3.csv", index=False)
+    customer_log.to_csv("Logs/customer_log3.csv", index=False)
+    queue_log.to_csv("Logs/queue_log3.csv", index=False)

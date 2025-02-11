@@ -1,7 +1,6 @@
 import heapq
 import warnings
 
-# use dataclasses to improve readability
 from dataclasses import dataclass, field
 from itertools import count
 from typing import Tuple, List
@@ -16,106 +15,138 @@ warnings.filterwarnings("ignore", module="tqdm")
 
 @dataclass(slots=True, frozen=True)
 class Event:
-    """class for keeping track of events"""
+    """Represents a discrete event in the supermarket simulation.
 
-    # initialize variables for object
-    # init is set to false, so the counter doesn't reset every time
+    Events are immutable and ordered by their occurrence time. Used to drive
+    the discrete event simulation forward.
+
+    Attributes:
+        ev_id: Unique event identifier (auto-generated)
+        time: Simulation time when event occurs (in seconds)
+        kind: Type of event ('arr' for arrival, 'dep' for departure)
+        customer: Customer object associated with the event
+        c_id: Checkout station ID where event occurs (1-based index)
+    """
+
     ev_id: int = field(default_factory=count(start=1).__next__, init=False)
-    """ generate a new id when a class object is created, used for sorting purposes in heapq """
     time: float
-    """ time at which event occurs """
     kind: str
-    """ kind of event ("arr": arrival and "dep": departure) """
     customer: object
-    """ customer that is handled """
     c_id: int
-    """ id of checkout where event occurs """
 
 
 @dataclass(slots=True)
 class Customer:
-    """class to keep track of customers"""
+    """Represents a customer moving through the supermarket system.
 
-    # initialize Variables for Object
-    t_arr: float = None
-    """ arrival time of the customer """
+    Tracks key timestamps and processing parameters for an individual customer's journey.
+
+    Attributes:
+        cust_id: Unique customer identifier (auto-generated)
+        t_arr: Arrival time at checkout area (in seconds)
+        t_dep: Departure time from checkout (in seconds)
+        t_proc: Total processing time required (in seconds)
+        num_items: Number of items in shopping basket
+        proc_rate_per_item: Processing time per item (in seconds/item)
+        c_id: Checkout station ID assigned to (1-based index)
+    """
+
     cust_id: int = field(default_factory=count(start=1).__next__, init=False)
-    """ generate an unique id for every customer """
+    t_arr: float = None
     t_dep: float = None
-    """ initialize departure time """
     t_proc: float = None
-    """ initialize processing time """
     num_items: int = None
-    """ number of items the customer wants to buy"""
-    proc_rate_per_item: int = None
-    """ processing rate per item """
+    proc_rate_per_item: float = None
     c_id: int = None
-    """id of the checkout the customer queues at"""
 
 
 @dataclass(slots=True)
 class Checkout:
-    """Class to keep track of Checkouts"""
+    """Represents a checkout station in the supermarket.
 
-    # initialize variables
+    Manages queue state and processing capacity for either cashier-operated or
+    self-service checkout stations.
+
+    Attributes:
+        c_id: Unique station identifier (1-based index)
+        c_type: Station type ('cc' for cashier, 'sc' for self-checkout)
+        c_status: Operational status (0: available, 1: at full capacity)
+        c_quant: Number of cashier stations
+        sc_quant: Number of self-checkout stations
+        queue: Priority queue of waiting customers (sorted by arrival time)
+        processing: Priority queue of active customers (sorted by departure time)
+
+    Note:
+        Uses heapq internally to maintain efficient queue operations
+    """
+
     c_id: int
-    """ id of the checkout """
     c_type: str
-    """ type of the checkout {'sc': self-checkout, 'cc': cashier checkout}"""
     c_status: int = 0
-    """ status of the cashier/self-checkout {0: free, 1: Busy}"""
     c_quant: int = 1
-    """ number of cashiers """
     sc_quant: int = 6
-    """ number of self checkouts """
     queue: List[Tuple[float, int, Customer]] = field(default_factory=list)
-    """ list of costumers in queue """
     processing: List[Tuple[float, int, Customer]] = field(default_factory=list)
-    """ list of customers in processing """
 
-    # heapify the queue and processing list and make sure c_status is always 0,
     def __post_init__(self):
+        """Initialize heap structures for queue and processing lists."""
         heapq.heapify(self.queue)
         heapq.heapify(self.processing)
 
 
 class Simulation:
-    """Class for simulation of a supermarket"""
+    """Class for simulation of a supermarket checkout system.
+
+    Simulates customer arrivals, queue management, and checkout processing using discrete event simulation.
+    Tracks system state through event logging, customer flow, and queue lengths over time.
+
+    Args:
+        s_seed: Random number generator seed
+        t_max: Simulation time in seconds
+        distribution: Processing time distribution ("POS" for distribution following the POS Data or "exp" for exponential distribution)
+        proc_exp_cc: Exponential distribution parameter for cashier checkouts
+        proc_exp_sc: Exponential distribution parameter for self-checkouts
+        proc_pos_cc_loc: POS data location parameter for transaction time on cashier checkouts
+        proc_pos_cc_scale: POS data scale parameter for transaction time on cashier checkouts
+        proc_pos_sc_loc: POS data location parameter for transaction time on self-checkouts
+        proc_pos_sc_scale: POS data scale parameter for transaction time on self-checkouts
+        arrival_rate: Arrival rate of customers
+        num_cc: Number of cashier-operated checkouts
+        num_sc: Number of self-service checkouts
+        c_quant: Number of customers that can be handled at once at cashier checkouts
+        sc_quant: Number of customers that can be handled at once at self-checkouts
+        item_scale: Scale parameter for the number of items a customer buys
+
+    Attributes:
+        event_log: List of all simulated events
+        customer_log: List of customer journey records
+        queue_log: Historical record of queue lengths
+        checkouts: Dictionary of checkout stations
+    """
 
     def __init__(
         self,
         s_seed: int = 42,
-        # seed for random number generation
         t_max: float = 1000,
-        # duration of the simulation in s
         distribution: str = "POS",
-        # chosen distribution (POS -> Distributions extracted from Paper, exp -> Exponential distribution)
         proc_exp_cc: float = 2.5,
-        # Parameter for exponential distribution on cashier checkouts
         proc_exp_sc: float = 0.75,
-        # Parameter for exponential distribution on self-checkouts
         proc_pos_cc_loc: float = 3.7777777777777777,
-        # location parameter for transaction time on cashier checkouts
         proc_pos_cc_scale: float = 2.1742325579116906,
-        # scale parameter for transaction time on cashier checkouts
         proc_pos_sc_loc: float = 11.224246069610276,
-        # location parameter for transaction time on self-checkouts
         proc_pos_sc_scale: float = 6.208811868891992,
-        # scale parameter for transaction time on self-checkouts
         arrival_rate: float = 3.5,
-        # scale rate parameter for the exponential distribution
         num_cc: int = 6,
-        # number of cashier checkouts
         num_sc: int = 1,
-        # number of self-checkouts
         c_quant: int = 1,
-        # quantity of customers that can be handled at once at cashier checkout
         sc_quant: int = 6,
-        # quantity of customers that can be handled at once at self-checkout
         item_scale: float = 14.528563291255535,
-        # Scale parameter for the generation of the number of items a customer buys
     ):
-        """initialize parameters"""
+        """Initialize simulation parameters and system state.
+
+        Creates checkout stations, initializes logging structures,
+        and schedules first arrival event.
+        """
         self.processing_parameters_exp = {"cc": proc_exp_cc, "sc": proc_exp_sc}
         self.processing_parameters_pos = {
             "cc_loc": proc_pos_cc_loc,
@@ -154,10 +185,12 @@ class Simulation:
         self.update_ql()
 
     def get_arrival(self):
+        """Schedule next customer arrival and assign to shortest queue.
 
-        """
-        sample arrival time, choose the shortest queue, generate a new_customer, amount of items the customer has in cart
-        and add the new arrival event to the event list of the class object
+        Generates:
+            - Inter-arrival time using exponential distribution
+            - Customer's item count using exponential distribution
+            - New arrival event added to event queue
         """
         # calculate the min value in list
         min_value = min(self.ql_list)
@@ -181,7 +214,6 @@ class Simulation:
         # and c_id to schedule new events
         heapq.heappush(self.event_list, (t_arrival, new_arr.ev_id, new_arr))
 
-    # use ql for checking
     def update_ql(self):
         """update the list of queue lengths and write it to the queue log"""
         new_ql = []
@@ -191,10 +223,13 @@ class Simulation:
         self.ql_list = new_ql
 
     def arrival(self):
-        """
-        pops the arrival event from the event list (first entry, since min-heap is used), and writes it to event log.
-        A customer is added to the respective checkout queue and the update_ql() method is called.
-        If the queue is empty the customer is processed directly.
+        """Process customer arrival event.
+
+        Steps:
+            1. Remove arrival event from queue
+            2. Add customer to selected checkout queue
+            3. If checkout available, start processing
+            4. Schedule next arrival event
         """
         # grab first event from heapq
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -283,12 +318,13 @@ class Simulation:
         self.get_arrival()
 
     def departure(self):
-        """
-        Pops the departure event from the event list and logs departure.
+        """Process customer departure event.
 
-        If the queue is empty a new customer is popped from the queue and enters the processing queue.
-        Processing rate per item, total processing rate and departure time are calculated. A new departure event is
-        pushed into the event list.
+        Steps:
+            1. Remove departure event from queue
+            2. Free up checkout capacity
+            3. If customers waiting, start next processing
+            4. Log customer journey statistics
         """
         # pop from heap
         self.t, ev_id, current_event = heapq.heappop(self.event_list)
@@ -391,9 +427,17 @@ class Simulation:
         elif self.event_list[0][2].kind == "dep":
             self.departure()
 
-    def simulate(self):
-        """
-        :return: Event-, Customer- und queue Log als Liste
+    def simulate(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Run the simulation until time limit is reached.
+
+        Returns:
+            Tuple containing:
+                - event_df: DataFrame of all events
+                - customer_df: DataFrame of customer journeys
+                - queue_df: DataFrame of queue lengths over time
+
+        Note:
+            Uses tqdm progress bar to display simulation progress
         """
 
         # 1. Get initial Arrival
@@ -436,7 +480,9 @@ if __name__ == "__main__":
     Experiment 1:
     """
     my_sim = Simulation(
-        num_cc=16, num_sc=1, t_max=10000  # six self checkouts with one queue
+        num_cc=16,
+        num_sc=1,
+        t_max=10000,  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
@@ -448,7 +494,9 @@ if __name__ == "__main__":
     Experiment 2:
     """
     my_sim = Simulation(
-        num_cc=22, num_sc=1, t_max=10000  # six self checkouts with one queue
+        num_cc=22,
+        num_sc=1,
+        t_max=10000,  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 
@@ -460,7 +508,9 @@ if __name__ == "__main__":
     Experiment 3:
     """
     my_sim = Simulation(
-        num_cc=16, num_sc=2, t_max=10000  # six self checkouts with one queue
+        num_cc=16,
+        num_sc=2,
+        t_max=10000,  # six self checkouts with one queue
     )
     event_log, customer_log, queue_log = my_sim.simulate()
 

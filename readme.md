@@ -27,7 +27,7 @@ There are two Jupyter Notebooks:
 ## Simulation Flow
 ```mermaid
 graph TD
-    a[Start] --> b[Continuously<br>Generate arrivals]
+    a[Start] --> b[Continuously<br>generate arrivals]
     b --> c[Process next event]
     c --> n{Arrival <br>event?}
     n --> |Yes| d{Checkout <br> idle?}

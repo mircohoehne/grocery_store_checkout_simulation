@@ -27,7 +27,7 @@ There are two Jupyter Notebooks:
 ## Simulation Flow
 ```mermaid
 graph TD
-    a[Start] --> b[Generate arrival]
+    a[Start] --> b[Continuously<br>Generate arrivals]
     b --> c[Process next event]
     c --> n{Arrival <br>event?}
     n --> |Yes| d{Checkout <br> idle?}
@@ -40,7 +40,7 @@ graph TD
     j --> |Yes| h
     j --> |No| l[Handle next customer in queue]
     l --> h
-    h --> |No| b
+    h --> |No| c
     h --> |Yes| i[End]
 ```
 The simulation is implemented so that the customer always chooses the shortest queue. If there are multiple queues with the same length, the customer randomly chooses one of the shortest queues.
